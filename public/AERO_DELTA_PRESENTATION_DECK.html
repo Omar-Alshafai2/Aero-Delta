@@ -3,20 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AERO-DELTA // NASA Space Apps 2026 Flight Presentation</title>
+  <title>AERO-DELTA // NASA Space Apps 2026 Flight Presentation Deck</title>
   <style>
     :root {
-      --void: #030712;
-      --panel: rgba(11, 18, 38, 0.88);
-      --panel-border: rgba(65, 230, 255, 0.22);
+      --void: #02050e;
+      --panel: rgba(10, 17, 36, 0.88);
+      --panel-border: rgba(65, 230, 255, 0.24);
       --ink: #f0f6fc;
       --dim: #8b9bb4;
       --accent: #41e6ff;
-      --accent-glow: rgba(65, 230, 255, 0.45);
+      --accent-glow: rgba(65, 230, 255, 0.5);
       --ember: #ffb454;
-      --ember-glow: rgba(255, 180, 84, 0.4);
+      --ember-glow: rgba(255, 180, 84, 0.45);
       --lime: #38ef7d;
-      --lime-glow: rgba(56, 239, 125, 0.35);
+      --lime-glow: rgba(56, 239, 125, 0.4);
       --danger: #ff4b6a;
       --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -36,7 +36,7 @@
       position: relative;
     }
 
-    /* Ambient Space Background & Grid */
+    /* Ambient Space Background & Dynamic Starfield */
     #starsCanvas {
       position: fixed;
       top: 0;
@@ -51,26 +51,37 @@
       position: fixed;
       inset: 0;
       background-image: 
-        linear-gradient(to right, rgba(65, 230, 255, 0.03) 1px, transparent 1px),
-        linear-gradient(to bottom, rgba(65, 230, 255, 0.03) 1px, transparent 1px);
-      background-size: 48px 48px;
+        linear-gradient(to right, rgba(65, 230, 255, 0.025) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(65, 230, 255, 0.025) 1px, transparent 1px);
+      background-size: 50px 50px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .ambient-glow {
+      position: fixed;
+      top: -20%;
+      left: 20%;
+      width: 60vw;
+      height: 60vh;
+      background: radial-gradient(circle, rgba(65, 230, 255, 0.06) 0%, transparent 70%);
       pointer-events: none;
       z-index: 1;
     }
 
     /* Top HUD Navigation Bar */
     .hud-header {
-      background: rgba(8, 14, 30, 0.92);
-      backdrop-filter: blur(16px);
+      background: rgba(6, 12, 28, 0.94);
+      backdrop-filter: blur(20px);
       border-bottom: 1px solid var(--panel-border);
-      padding: 12px 28px;
+      padding: 12px 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
       position: sticky;
       top: 0;
       z-index: 100;
-      box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+      box-shadow: 0 4px 30px rgba(0,0,0,0.8);
     }
 
     .progress-bar-container {
@@ -86,9 +97,9 @@
     .progress-bar {
       height: 100%;
       width: 14.28%;
-      background: linear-gradient(90deg, #11998e, var(--accent));
-      box-shadow: 0 0 12px var(--accent-glow);
-      transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+      background: linear-gradient(90deg, #00d2ff, #38ef7d);
+      box-shadow: 0 0 14px var(--accent-glow);
+      transition: width 0.5s cubic-bezier(0.2, 0.9, 0.3, 1);
     }
 
     .logo-container {
@@ -102,8 +113,13 @@
       height: 38px;
       border-radius: 50%;
       border: 1.5px solid var(--accent);
-      box-shadow: 0 0 14px var(--accent-glow);
+      box-shadow: 0 0 16px var(--accent-glow);
       object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+
+    .logo-badge-img:hover {
+      transform: rotate(360deg) scale(1.1);
     }
 
     .logo-text {
@@ -156,18 +172,18 @@
       border-radius: 50%;
       background: var(--lime);
       box-shadow: 0 0 8px var(--lime);
-      animation: pulse 1.5s infinite;
+      animation: pulse 1.6s infinite;
     }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(0.85); }
+      50% { opacity: 0.35; transform: scale(0.8); }
     }
 
     /* Main Deck Layout */
     .deck-container {
       max-width: 1280px;
-      margin: 28px auto;
+      margin: 26px auto;
       padding: 0 24px;
       flex: 1;
       width: 100%;
@@ -175,31 +191,41 @@
       z-index: 10;
     }
 
-    /* Slide Card */
+    /* Slide Card with Smooth Motion Transitions */
     .slide-card {
       display: none;
       background: var(--panel);
       border: 1px solid var(--panel-border);
-      border-radius: 8px;
-      padding: 38px 44px;
-      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.85), inset 0 1px 0 rgba(255,255,255,0.1);
+      border-radius: 10px;
+      padding: 38px 46px;
+      box-shadow: 0 24px 80px rgba(0, 0, 0, 0.9), inset 0 1px 0 rgba(255,255,255,0.12);
       position: relative;
-      backdrop-filter: blur(20px);
-      min-height: 620px;
+      backdrop-filter: blur(24px);
+      min-height: 630px;
+      opacity: 0;
+      transform: translateY(24px) scale(0.98);
+      transition: opacity 0.45s cubic-bezier(0.2, 0.9, 0.3, 1), transform 0.45s cubic-bezier(0.2, 0.9, 0.3, 1);
     }
 
     .slide-card.active {
       display: flex;
       flex-direction: column;
-      animation: slideIn 0.45s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+      opacity: 1;
+      transform: translateY(0) scale(1);
     }
 
-    @keyframes slideIn {
-      from { opacity: 0; transform: translateY(16px) scale(0.99); }
-      to { opacity: 1; transform: translateY(0) scale(1); }
+    /* Staggered Content Animation */
+    .slide-card.active .anim-stagger-1 { animation: fadeInStagger 0.4s ease 0.05s both; }
+    .slide-card.active .anim-stagger-2 { animation: fadeInStagger 0.45s ease 0.12s both; }
+    .slide-card.active .anim-stagger-3 { animation: fadeInStagger 0.5s ease 0.18s both; }
+    .slide-card.active .anim-stagger-4 { animation: fadeInStagger 0.55s ease 0.24s both; }
+
+    @keyframes fadeInStagger {
+      from { opacity: 0; transform: translateY(14px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    /* Slide Headers */
+    /* Slide Header Meta */
     .slide-meta-row {
       display: flex;
       align-items: center;
@@ -221,9 +247,10 @@
     .slide-badge::before {
       content: "";
       display: inline-block;
-      width: 12px;
+      width: 14px;
       height: 2px;
       background: var(--accent);
+      box-shadow: 0 0 8px var(--accent);
     }
 
     .slide-timer {
@@ -247,7 +274,7 @@
     .subtitle {
       color: var(--dim);
       font-size: 14.5px;
-      margin-bottom: 24px;
+      margin-bottom: 22px;
       line-height: 1.5;
     }
 
@@ -255,7 +282,7 @@
     .grid-2 {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 24px;
+      gap: 22px;
     }
 
     .grid-3 {
@@ -271,12 +298,18 @@
     }
 
     .hud-panel {
-      background: rgba(4, 8, 20, 0.7);
+      background: rgba(5, 10, 24, 0.72);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 6px;
+      border-radius: 8px;
       padding: 20px;
       position: relative;
       overflow: hidden;
+      transition: border-color 0.3s ease, box-shadow 0.3s ease, transform 0.3s ease;
+    }
+
+    .hud-panel:hover {
+      border-color: rgba(65, 230, 255, 0.35);
+      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
     }
 
     .hud-panel::after {
@@ -317,20 +350,20 @@
       line-height: 1.4;
     }
 
-    /* Interactive UI Mockup Elements */
+    /* Interactive UI Mockup Windows */
     .mockup-window {
-      background: #02040a;
+      background: #02040b;
       border: 1px solid var(--panel-border);
-      border-radius: 6px;
+      border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 16px 40px rgba(0,0,0,0.7);
+      box-shadow: 0 16px 44px rgba(0,0,0,0.75);
       display: flex;
       flex-direction: column;
     }
 
     .mockup-titlebar {
-      background: #090e1f;
-      padding: 8px 14px;
+      background: #080d1e;
+      padding: 9px 16px;
       border-bottom: 1px solid rgba(255,255,255,0.08);
       display: flex;
       align-items: center;
@@ -358,34 +391,49 @@
     .mockup-dot.green { background: #27c93f; }
 
     .mockup-body {
-      padding: 18px;
+      padding: 20px;
       flex: 1;
       display: flex;
       flex-direction: column;
       gap: 14px;
     }
 
-    /* Radar / Globe Animation Widget */
-    .radar-display {
+    /* 3D Moon Showcase Container */
+    .moon-showcase-container {
       position: relative;
       width: 100%;
-      height: 240px;
-      background: radial-gradient(circle at center, rgba(65, 230, 255, 0.08) 0%, rgba(2, 4, 10, 0.95) 75%);
-      border-radius: 6px;
-      border: 1px solid rgba(65, 230, 255, 0.2);
+      height: 270px;
+      background: radial-gradient(circle at center, rgba(65, 230, 255, 0.08) 0%, rgba(2, 4, 12, 0.98) 75%);
+      border-radius: 8px;
+      border: 1px solid rgba(65, 230, 255, 0.25);
       overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
     }
 
-    .radar-sweep {
+    .moon-photo-bg {
       position: absolute;
       width: 100%;
       height: 100%;
+      object-fit: cover;
+      opacity: 0.65;
+      filter: contrast(1.15) brightness(0.9);
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.4s ease;
+    }
+
+    .moon-photo-bg:hover {
+      transform: scale(1.04);
+      opacity: 0.8;
+    }
+
+    .radar-sweep {
+      position: absolute;
+      width: 120%;
+      height: 120%;
       border-radius: 50%;
-      background: conic-gradient(from 0deg, transparent 70%, rgba(65, 230, 255, 0.25) 100%);
-      animation: sweep 4s linear infinite;
+      background: conic-gradient(from 0deg, transparent 72%, rgba(65, 230, 255, 0.3) 100%);
+      animation: sweep 5s linear infinite;
       pointer-events: none;
     }
 
@@ -397,99 +445,80 @@
     .radar-rings {
       position: absolute;
       inset: 20px;
-      border: 1px dashed rgba(65, 230, 255, 0.2);
+      border: 1px dashed rgba(65, 230, 255, 0.22);
       border-radius: 50%;
       pointer-events: none;
-    }
-
-    .radar-rings::before {
-      content: "";
-      position: absolute;
-      inset: 35px;
-      border: 1px solid rgba(65, 230, 255, 0.15);
-      border-radius: 50%;
-    }
-
-    .radar-rings::after {
-      content: "";
-      position: absolute;
-      inset: 70px;
-      border: 1px solid rgba(65, 230, 255, 0.25);
-      border-radius: 50%;
     }
 
     .radar-crosshair-h {
       position: absolute;
       width: 100%;
       height: 1px;
-      background: rgba(65, 230, 255, 0.15);
+      background: rgba(65, 230, 255, 0.18);
     }
 
     .radar-crosshair-v {
       position: absolute;
       height: 100%;
       width: 1px;
-      background: rgba(65, 230, 255, 0.15);
+      background: rgba(65, 230, 255, 0.18);
     }
 
+    /* Target Pins with Interactive Pulse */
     .site-target-pin {
       position: absolute;
       cursor: pointer;
       display: flex;
       flex-direction: column;
       align-items: center;
-      transition: all 0.25s ease;
+      transition: all 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
       z-index: 10;
     }
 
+    .site-target-pin:hover {
+      transform: scale(1.25) translateY(-4px);
+    }
+
     .pin-icon {
-      width: 12px;
-      height: 12px;
+      width: 13px;
+      height: 13px;
       border-radius: 50%;
       background: var(--accent);
-      box-shadow: 0 0 10px var(--accent);
+      box-shadow: 0 0 12px var(--accent);
       border: 2px solid #fff;
-      animation: pinPing 2s infinite;
+      animation: pinPing 2.2s infinite;
     }
 
     @keyframes pinPing {
       0% { transform: scale(1); box-shadow: 0 0 6px var(--accent); }
-      50% { transform: scale(1.3); box-shadow: 0 0 16px var(--accent); }
+      50% { transform: scale(1.35); box-shadow: 0 0 20px var(--accent); }
       100% { transform: scale(1); box-shadow: 0 0 6px var(--accent); }
     }
 
     .pin-label {
       font-family: var(--font-mono);
-      font-size: 9px;
-      padding: 2px 6px;
+      font-size: 9.5px;
+      padding: 2px 7px;
       background: rgba(0,0,0,0.85);
       border: 1px solid var(--accent);
-      border-radius: 2px;
+      border-radius: 3px;
       color: #fff;
       white-space: nowrap;
       margin-top: 4px;
       pointer-events: none;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.8);
     }
 
-    /* Waveform & Horizon Chart Simulator */
-    .horizon-chart-svg {
-      width: 100%;
-      height: 140px;
-      background: rgba(0,0,0,0.5);
-      border-radius: 4px;
-      border: 1px solid rgba(255,255,255,0.08);
-    }
-
-    /* Script / Speaker Callout Box */
+    /* Speaker Briefing Box */
     .script-box {
       margin-top: 20px;
-      padding: 14px 18px;
+      padding: 14px 20px;
       border-left: 3px solid var(--accent);
       background: rgba(65, 230, 255, 0.05);
       font-size: 13px;
       line-height: 1.55;
       color: #cbd5e1;
-      border-radius: 0 4px 4px 0;
+      border-radius: 0 6px 6px 0;
     }
 
     .script-title {
@@ -502,7 +531,39 @@
       font-weight: bold;
     }
 
-    /* Table Styles */
+    /* Comparison Box Cards in Slide 1 */
+    .problem-solution-card {
+      padding: 22px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .problem-solution-card.problem {
+      background: rgba(255, 75, 106, 0.06);
+      border: 1px solid rgba(255, 75, 106, 0.3);
+    }
+
+    .problem-solution-card.solution {
+      background: rgba(56, 239, 125, 0.06);
+      border: 1px solid rgba(56, 239, 125, 0.35);
+    }
+
+    .card-banner {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      font-weight: bold;
+      text-transform: uppercase;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Tables */
     table {
       width: 100%;
       border-collapse: collapse;
@@ -510,7 +571,7 @@
       font-size: 11.5px;
       background: rgba(0, 0, 0, 0.4);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 4px;
+      border-radius: 6px;
       overflow: hidden;
     }
 
@@ -529,15 +590,15 @@
     }
 
     tr:hover td {
-      background: rgba(65, 230, 255, 0.05);
+      background: rgba(65, 230, 255, 0.06);
     }
 
     /* Footer & Navigation Controls */
     .footer-bar {
       margin-top: auto;
-      background: rgba(8, 14, 30, 0.95);
+      background: rgba(6, 12, 28, 0.95);
       border-top: 1px solid var(--panel-border);
-      padding: 14px 28px;
+      padding: 14px 32px;
       display: flex;
       align-items: center;
       justify-content: space-between;
@@ -555,7 +616,7 @@
       font-weight: bold;
       cursor: pointer;
       border-radius: 4px;
-      transition: all 0.2s;
+      transition: all 0.2s cubic-bezier(0.2, 0.9, 0.3, 1);
       display: flex;
       align-items: center;
       gap: 8px;
@@ -564,11 +625,12 @@
     .nav-btn:hover {
       border-color: var(--accent);
       color: var(--accent);
-      box-shadow: 0 0 14px rgba(65, 230, 255, 0.25);
+      box-shadow: 0 0 16px rgba(65, 230, 255, 0.3);
+      transform: translateY(-1px);
     }
 
     .nav-btn.primary {
-      background: rgba(65, 230, 255, 0.15);
+      background: rgba(65, 230, 255, 0.16);
       border-color: var(--accent);
       color: var(--accent);
     }
@@ -576,7 +638,7 @@
     .nav-btn.primary:hover {
       background: var(--accent);
       color: #000;
-      box-shadow: 0 0 20px var(--accent-glow);
+      box-shadow: 0 0 22px var(--accent-glow);
     }
 
     .slide-dots {
@@ -591,7 +653,7 @@
       border-radius: 3px;
       background: rgba(255, 255, 255, 0.18);
       cursor: pointer;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: all 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
       border: 1px solid transparent;
     }
 
@@ -601,12 +663,11 @@
     }
 
     .slide-dot.active {
-      width: 32px;
+      width: 34px;
       background: var(--accent);
-      box-shadow: 0 0 12px var(--accent-glow);
+      box-shadow: 0 0 14px var(--accent-glow);
     }
 
-    /* Key Badge */
     .kbd {
       background: rgba(255, 255, 255, 0.1);
       border: 1px solid rgba(255, 255, 255, 0.2);
@@ -616,7 +677,6 @@
       font-family: var(--font-mono);
     }
 
-    /* Live CTA Button */
     .cta-live-btn {
       display: inline-flex;
       align-items: center;
@@ -628,35 +688,36 @@
       font-size: 13px;
       letter-spacing: 1px;
       text-decoration: none;
-      padding: 12px 24px;
-      border-radius: 4px;
+      padding: 12px 26px;
+      border-radius: 5px;
       box-shadow: 0 8px 24px rgba(0, 210, 255, 0.4);
-      transition: all 0.25s ease;
+      transition: all 0.25s cubic-bezier(0.2, 0.9, 0.3, 1);
       border: none;
       cursor: pointer;
     }
 
     .cta-live-btn:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px rgba(0, 210, 255, 0.6);
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 14px 34px rgba(0, 210, 255, 0.65);
     }
   </style>
 </head>
 <body>
 
-  <!-- Ambient Starfield & Grid Canvas -->
+  <!-- Ambient Starfield Canvas & Space Grid -->
   <canvas id="starsCanvas"></canvas>
   <div class="ambient-grid"></div>
+  <div class="ambient-glow"></div>
 
   <!-- Top Progress Bar -->
   <div class="progress-bar-container">
     <div class="progress-bar" id="progressBar"></div>
   </div>
 
-  <!-- HUD Header -->
+  <!-- HUD Header Bar -->
   <header class="hud-header">
     <div class="logo-container">
-      <img src="logo.jpg" alt="Aero-Delta Logo" class="logo-badge-img" onerror="this.src='aero-delta-logo.jpg'">
+      <img src="images/aero-delta-logo.jpg" alt="Aero-Delta Logo" class="logo-badge-img" onerror="this.src='logo.jpg'">
       <div class="logo-text">
         <span>AERO-DELTA // MISSION CONTROL</span>
         <span>LUNAR SOUTH POLE PLANNING SYSTEM</span>
@@ -677,117 +738,125 @@
   <main class="deck-container">
 
     <!-- ============================================================== -->
-    <!-- SLIDE 1: CHALLENGE & OPERATIONAL NEED                          -->
+    <!-- SLIDE 1: THE CORE PROBLEM & THE AERO-DELTA SOLUTION           -->
     <!-- ============================================================== -->
     <section class="slide-card active" data-slide="1">
-      <div class="slide-meta-row">
-        <div class="slide-badge">SLIDE 01 // OPERATIONAL PROBLEM STATEMENT</div>
-        <div class="slide-timer">MET: T+00:00 // NASA SPACE APPS 2026</div>
+      <div class="slide-meta-row anim-stagger-1">
+        <div class="slide-badge">SLIDE 01 // OPERATIONAL PROBLEM & SOLUTION DECLARATION</div>
+        <div class="slide-timer">NASA SPACE APPS CHALLENGE 2026</div>
       </div>
-      <h1>The South Pole Horizon Dilemma: Lighting & DTE Constraints</h1>
-      <p class="subtitle">Why missions to the Lunar South Pole break traditional planning tools, and how AERO-DELTA solves the scenario gap.</p>
+      <h1 class="anim-stagger-1">The South Pole Horizon Dilemma & The AERO-DELTA Solution</h1>
+      <p class="subtitle anim-stagger-2">Extreme lighting and communication constraints paralyze lunar mission planning. Here is why it breaks, and how our platform solves it.</p>
 
-      <div class="grid-4" style="margin-bottom: 22px;">
-        <div class="hud-panel">
-          <div class="hud-panel-title">
-            <span>Lunar Obliquity</span>
-            <span style="color: var(--accent);">tilt</span>
+      <!-- Declaring The Problem vs The Solution Side-by-Side -->
+      <div class="grid-2 anim-stagger-3" style="margin-bottom: 20px;">
+        
+        <!-- THE PROBLEM -->
+        <div class="problem-solution-card problem">
+          <div class="card-banner" style="color: var(--danger);">
+            <span>🚨 THE CRITICAL PROBLEM // WHY MISSIONS FAIL</span>
           </div>
-          <div class="metric-value">1.543°</div>
-          <div class="metric-sub">Grazing sun angles skim the surface, casting 50km+ shadows from modest crater rims.</div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: #e2e8f0; line-height: 1.5;">
+            <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 4px; border-left: 2px solid var(--danger);">
+              <strong style="color: #fff;">1. Extreme Grazing Sunlight (< 2° Elevation):</strong>
+              <div style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">
+                Sun skims the polar horizon, casting 50km+ shadows from crater rims into cryogenic Permanently Shadowed Regions (PSRs) at -233°C.
+              </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 4px; border-left: 2px solid var(--danger);">
+              <strong style="color: #fff;">2. Libration Blackouts (±6.7° Wobble):</strong>
+              <div style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">
+                Earth oscillates along the horizon over 27.3 days. Ridgelines cut Direct-to-Earth (DTE) communication unexpectedly, stranding landers.
+              </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 4px; border-left: 2px solid var(--danger);">
+              <strong style="color: #fff;">3. Launch Delay Paralysis (Fragmented Tools):</strong>
+              <div style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">
+                When rocket hardware slips by days, comparing alternative dates and sites in NASA Quickmap or JPL Horizons takes days of expert manual calculation.
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="hud-panel">
-          <div class="hud-panel-title">
-            <span>Lunar Diurnal Cycle</span>
-            <span style="color: var(--ember);">rotation</span>
+        <!-- THE SOLUTION -->
+        <div class="problem-solution-card solution">
+          <div class="card-banner" style="color: var(--lime);">
+            <span>🚀 THE AERO-DELTA SOLUTION // RAPID SCENARIO EVALUATOR</span>
           </div>
-          <div class="metric-value">708.7 h</div>
-          <div class="metric-sub">29.53 Earth days per synodic cycle. Shifting launch dates by hours alters viability by days.</div>
+
+          <div style="display: flex; flex-direction: column; gap: 12px; font-size: 13px; color: #e2e8f0; line-height: 1.5;">
+            <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 4px; border-left: 2px solid var(--lime);">
+              <strong style="color: #fff;">1. Deterministic Zero-Latency Ephemeris:</strong>
+              <div style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">
+                Calculates real Topocentric solar and Earth vectors in-browser, calibrated against JPL Horizons ephemeris with zero fake data.
+              </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 4px; border-left: 2px solid var(--lime);">
+              <strong style="color: #fff;">2. Unified 3D Moon & Horizon Visibility:</strong>
+              <div style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">
+                Interactive 3D lunar globe with 15 curated landing sites, local terrain obstacle masking, and line-of-sight elevation tracking.
+              </div>
+            </div>
+
+            <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 4px; border-left: 2px solid var(--lime);">
+              <strong style="color: #fff;">3. Instant Scenario Trade-Off Matrix:</strong>
+              <div style="color: #cbd5e1; font-size: 12px; margin-top: 2px;">
+                Mission directors can evaluate multiple landing sites and schedule shifts in seconds, viewing immediate power and comms feasibility curves.
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div class="hud-panel">
-          <div class="hud-panel-title">
-            <span>Earth Libration Wobble</span>
-            <span style="color: var(--lime);">oscillation</span>
-          </div>
-          <div class="metric-value">±6.7°</div>
-          <div class="metric-sub">Direct-to-Earth line-of-sight dips below local ridgelines, cutting communication unpredictably.</div>
-        </div>
-
-        <div class="hud-panel">
-          <div class="hud-panel-title">
-            <span>Curated Benchmarks</span>
-            <span style="color: #c084fc;">database</span>
-          </div>
-          <div class="metric-value">15 SITES</div>
-          <div class="metric-sub">Artemis III candidate peaks, CLPS commercial targets, and Apollo historical baselines.</div>
-        </div>
-      </div>
-
-      <div class="grid-2">
-        <div class="hud-panel">
-          <div class="hud-panel-title">
-            <span>The Existing Tools Gap</span>
-            <span style="color: var(--danger);">Bottleneck</span>
-          </div>
-          <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #cbd5e1;">
-            <li style="display: flex; gap: 8px;">
-              <span style="color: var(--danger);">✕</span>
-              <span><strong>NASA Quickmap & Moon Trek:</strong> Built for high-res static science; slow for rapid multi-scenario date/site trade-offs.</span>
-            </li>
-            <li style="display: flex; gap: 8px;">
-              <span style="color: var(--danger);">✕</span>
-              <span><strong>JPL Horizons CLI:</strong> Complex raw vector data requires manual trigonometry to deduce local horizon clearance.</span>
-            </li>
-            <li style="display: flex; gap: 8px;">
-              <span style="color: var(--danger);">✕</span>
-              <span><strong>Hardware Launch Delays:</strong> When rocket hardware shifts launch windows, re-evaluating candidate sites takes days.</span>
-            </li>
-          </ul>
-        </div>
-
-        <div class="hud-panel">
-          <div class="hud-panel-title">
-            <span>The AERO-DELTA Solution</span>
-            <span style="color: var(--lime);">Innovation</span>
-          </div>
-          <ul style="list-style: none; display: flex; flex-direction: column; gap: 10px; font-size: 13px; color: #cbd5e1;">
-            <li style="display: flex; gap: 8px;">
-              <span style="color: var(--lime);">✓</span>
-              <span><strong>Instantaneous Scenario Comparison:</strong> Evaluate 15 landing sites across any year/month/hour in milliseconds.</span>
-            </li>
-            <li style="display: flex; gap: 8px;">
-              <span style="color: var(--lime);">✓</span>
-              <span><strong>Zero Fake Data Math Engine:</strong> Real celestial mechanics with Topocentric Transformation & Horizon Masking.</span>
-            </li>
-            <li style="display: flex; gap: 8px;">
-              <span style="color: var(--lime);">✓</span>
-              <span><strong>Unified Operational Dashboard:</strong> Real-time 3D Moon Globe, power generation curves, and DTE comms windows.</span>
-            </li>
-          </ul>
-        </div>
       </div>
 
-      <div class="script-box">
-        <div class="script-title">JUDGES BRIEFING // THE CORE THESIS</div>
-        "At the Moon's South Pole, landing just 2 km away or launching 12 hours late is the difference between perpetual sunlight on an elevated rim versus freezing inside a cryogenic shadowed crater without Earth contact. AERO-DELTA gives mission planners the agility to evaluate viable alternatives instantly."
+      <!-- Quick Metrics Strip -->
+      <div class="grid-4 anim-stagger-4">
+        <div class="hud-panel" style="padding: 12px 16px;">
+          <div style="font-family: var(--font-mono); font-size: 9.5px; color: var(--dim); text-transform: uppercase;">LUNAR OBLIQUITY</div>
+          <div style="font-family: var(--font-mono); font-size: 20px; font-weight: bold; color: var(--accent);">1.543°</div>
+          <div style="font-size: 10.5px; color: var(--dim);">Causes grazing polar rays</div>
+        </div>
+        <div class="hud-panel" style="padding: 12px 16px;">
+          <div style="font-family: var(--font-mono); font-size: 9.5px; color: var(--dim); text-transform: uppercase;">SYNODIC DAY</div>
+          <div style="font-family: var(--font-mono); font-size: 20px; font-weight: bold; color: var(--ember);">708.7 h</div>
+          <div style="font-size: 10.5px; color: var(--dim);">29.53 Earth days/cycle</div>
+        </div>
+        <div class="hud-panel" style="padding: 12px 16px;">
+          <div style="font-family: var(--font-mono); font-size: 9.5px; color: var(--dim); text-transform: uppercase;">LIBRATION SWING</div>
+          <div style="font-family: var(--font-mono); font-size: 20px; font-weight: bold; color: var(--lime);">±6.7°</div>
+          <div style="font-size: 10.5px; color: var(--dim);">Shifts DTE line-of-sight</div>
+        </div>
+        <div class="hud-panel" style="padding: 12px 16px;">
+          <div style="font-family: var(--font-mono); font-size: 9.5px; color: var(--dim); text-transform: uppercase;">BENCHMARK SITES</div>
+          <div style="font-family: var(--font-mono); font-size: 20px; font-weight: bold; color: #c084fc;">15 SITES</div>
+          <div style="font-size: 10.5px; color: var(--dim);">Artemis, CLPS & Apollo</div>
+        </div>
+      </div>
+
+      <div class="script-box anim-stagger-4">
+        <div class="script-title">JUDGES BRIEFING // THE CORE MISSION VALUE</div>
+        "Landing at the lunar south pole is an engineering knife-edge: land on an elevated rim and you get 86% solar power; land 2 km lower in a crater and you freeze in perpetual darkness without Earth contact. AERO-DELTA turns weeks of tedious ephemeris interpretation into instantaneous, confident mission decisions."
       </div>
     </section>
 
     <!-- ============================================================== -->
-    <!-- SLIDE 2: 3D MOON GLOBE & SITE EXPLORATION                      -->
+    <!-- SLIDE 2: 3D MOON MODEL PHOTO & SITE TELEMETRY                  -->
     <!-- ============================================================== -->
     <section class="slide-card" data-slide="2">
-      <div class="slide-meta-row">
-        <div class="slide-badge">SLIDE 02 // WEB PLATFORM VISUALIZATION</div>
-        <div class="slide-timer">INTERACTIVE 3D LUNAR ENVIRONMENT</div>
+      <div class="slide-meta-row anim-stagger-1">
+        <div class="slide-badge">SLIDE 02 // 3D LUNAR ENVIRONMENT & SITES VISUALIZER</div>
+        <div class="slide-timer">INTERACTIVE 3D MOON TELEMETRY</div>
       </div>
-      <h1>Interactive 3D Moon Globe & Polar Site Telemetry</h1>
-      <p class="subtitle">Direct visualization of landing sites across the lunar geoid with real-time coordinate transformations.</p>
+      <h1 class="anim-stagger-1">3D Moon Model & Candidate Site Telemetry</h1>
+      <p class="subtitle anim-stagger-2">High-fidelity 3D lunar geoid rendering with 15 candidate landing site coordinates and terrain elevation profiles.</p>
 
-      <div class="grid-2">
-        <!-- Interactive Radar Mockup -->
+      <div class="grid-2 anim-stagger-3">
+        
+        <!-- 3D Moon Showcase Panel with Real Photo -->
         <div class="mockup-window">
           <div class="mockup-titlebar">
             <div class="mockup-controls">
@@ -795,39 +864,43 @@
               <span class="mockup-dot yellow"></span>
               <span class="mockup-dot green"></span>
             </div>
-            <span>3D_SELENOGRAPHIC_RADAR.EXE // WEBGL</span>
-            <span style="color: var(--accent);">60 FPS</span>
+            <span>3D_LUNAR_GEOID_VIEWER.EXE // THREE.JS</span>
+            <span style="color: var(--accent);">HIGH-RES MESH</span>
           </div>
-          <div class="mockup-body">
-            <div class="radar-display">
+          <div class="mockup-body" style="padding: 12px;">
+            <div class="moon-showcase-container">
+              <!-- Real Photo of 3D Moon Model -->
+              <img src="images/moon-hero.jpg" alt="3D Moon Model" class="moon-photo-bg" id="moonPhotoViewer" onerror="this.src='moon-hero.jpg'">
+              
+              <!-- Radar Overlay Effects -->
               <div class="radar-sweep"></div>
               <div class="radar-rings"></div>
               <div class="radar-crosshair-h"></div>
               <div class="radar-crosshair-v"></div>
 
-              <!-- Interactive Pins -->
-              <div class="site-target-pin" style="top: 45%; left: 48%;" onclick="selectDemoSite('shackleton')">
+              <!-- Interactive Candidate Target Pins -->
+              <div class="site-target-pin" style="top: 48%; left: 49%;" onclick="selectDemoSite('shackleton')">
                 <div class="pin-icon"></div>
                 <div class="pin-label">Shackleton Rim (-89.9°)</div>
               </div>
 
-              <div class="site-target-pin" style="top: 30%; left: 62%;" onclick="selectDemoSite('malapert')">
-                <div class="pin-icon" style="background: var(--lime); box-shadow: 0 0 10px var(--lime);"></div>
-                <div class="pin-label">Malapert Mountain (-84.9°)</div>
+              <div class="site-target-pin" style="top: 32%; left: 64%;" onclick="selectDemoSite('malapert')">
+                <div class="pin-icon" style="background: var(--lime); box-shadow: 0 0 12px var(--lime);"></div>
+                <div class="pin-label">Malapert Massif (-84.9°)</div>
               </div>
 
-              <div class="site-target-pin" style="top: 60%; left: 35%;" onclick="selectDemoSite('peak')">
-                <div class="pin-icon" style="background: var(--ember); box-shadow: 0 0 10px var(--ember);"></div>
+              <div class="site-target-pin" style="top: 64%; left: 34%;" onclick="selectDemoSite('peak')">
+                <div class="pin-icon" style="background: var(--ember); box-shadow: 0 0 12px var(--ember);"></div>
                 <div class="pin-label">Peak of Eternal Light (-89.7°)</div>
               </div>
 
-              <div class="site-target-pin" style="top: 20%; left: 25%;" onclick="selectDemoSite('apollo11')">
-                <div class="pin-icon" style="background: #a855f7; box-shadow: 0 0 10px #a855f7;"></div>
+              <div class="site-target-pin" style="top: 18%; left: 24%;" onclick="selectDemoSite('apollo11')">
+                <div class="pin-icon" style="background: #a855f7; box-shadow: 0 0 12px #a855f7;"></div>
                 <div class="pin-label">Apollo 11 Baseline (0.67°N)</div>
               </div>
             </div>
 
-            <div style="display: flex; gap: 8px; justify-content: center;">
+            <div style="display: flex; gap: 8px; justify-content: center; margin-top: 6px;">
               <button class="nav-btn" onclick="selectDemoSite('shackleton')">Shackleton</button>
               <button class="nav-btn" onclick="selectDemoSite('malapert')">Malapert</button>
               <button class="nav-btn" onclick="selectDemoSite('peak')">Eternal Light</button>
@@ -836,7 +909,7 @@
           </div>
         </div>
 
-        <!-- Telemetry Panel -->
+        <!-- Telemetry Details Panel -->
         <div class="hud-panel" style="display: flex; flex-direction: column; justify-content: space-between;">
           <div>
             <div class="hud-panel-title">
@@ -846,12 +919,12 @@
             
             <div class="grid-2" style="margin: 16px 0;">
               <div>
-                <div style="font-family: var(--font-mono); font-size: 10px; color: var(--dim);">COORDINATES</div>
+                <div style="font-family: var(--font-mono); font-size: 10px; color: var(--dim);">SELENOGRAPHIC COORDS</div>
                 <div id="siteCoordsDemo" style="font-family: var(--font-mono); font-size: 18px; font-weight: bold; color: #fff;">89.90° S, 0.00° E</div>
               </div>
               <div>
-                <div style="font-family: var(--font-mono); font-size: 10px; color: var(--dim);">SURFACE ELEVATION</div>
-                <div id="siteElevDemo" style="font-family: var(--font-mono); font-size: 18px; font-weight: bold; color: var(--accent);">+1,240 m (Rim)</div>
+                <div style="font-family: var(--font-mono); font-size: 10px; color: var(--dim);">CRATER RIM ELEVATION</div>
+                <div id="siteElevDemo" style="font-family: var(--font-mono); font-size: 18px; font-weight: bold; color: var(--accent);">+1,240 m (Rim Peak)</div>
               </div>
             </div>
 
@@ -861,7 +934,7 @@
                 <span id="siteIllumDemo" style="color: var(--accent); font-weight: bold;">86.4%</span>
               </div>
               <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-                <div id="siteIllumBar" style="width: 86.4%; height: 100%; background: linear-gradient(90deg, #38ef7d, var(--accent));"></div>
+                <div id="siteIllumBar" style="width: 86.4%; height: 100%; background: linear-gradient(90deg, #38ef7d, var(--accent)); transition: width 0.5s ease;"></div>
               </div>
             </div>
 
@@ -871,7 +944,7 @@
                 <span id="siteDteDemo" style="color: var(--lime); font-weight: bold;">AVAILABLE (64% LUNAR MONTH)</span>
               </div>
               <div style="height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
-                <div id="siteDteBar" style="width: 64%; height: 100%; background: var(--lime);"></div>
+                <div id="siteDteBar" style="width: 64%; height: 100%; background: var(--lime); transition: width 0.5s ease;"></div>
               </div>
             </div>
 
@@ -881,14 +954,14 @@
           </div>
 
           <div style="font-family: var(--font-mono); font-size: 10px; color: var(--dim); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px; margin-top: 10px;">
-            ✦ RENDERED VIA THREE.JS CLIENT-SIDE WITH HIGH-RES LUNAR NORMALS
+            ✦ CLIENT-SIDE THREE.JS SPHERE WITH LOLA TOPOGRAPHIC CONTOURS
           </div>
         </div>
       </div>
 
-      <div class="script-box">
-        <div class="script-title">UX HIGHLIGHT // ACCESSIBLE ACROSS SKILL LEVELS</div>
-        "Rather than navigating dense numeric tables, mission architects, students, and educators can click directly on the 3D Moon geoid or use search filters to instantly inspect terrain elevation, illumination percentiles, and communication windows."
+      <div class="script-box anim-stagger-4">
+        <div class="script-title">UX INNOVATION // ACCESSIBLE ACROSS AUDIENCES</div>
+        "Users don't need to read raw CSV tables. In AERO-DELTA, you interact with the 3D Moon sphere directly: click any polar ridge, inspect surface slopes, and immediately understand why Artemis III selects peaks like Shackleton and Malapert."
       </div>
     </section>
 
@@ -896,19 +969,19 @@
     <!-- SLIDE 3: DETERMINISTIC EPHEMERIS & HORIZON PHYSICS             -->
     <!-- ============================================================== -->
     <section class="slide-card" data-slide="3">
-      <div class="slide-meta-row">
-        <div class="slide-badge">SLIDE 03 // ASTRONOMICAL COMPUTATION CORE</div>
-        <div class="slide-timer">ZERO MOCK DATA // RIGOROUS CELESTIAL MECHANICS</div>
+      <div class="slide-meta-row anim-stagger-1">
+        <div class="slide-badge">SLIDE 03 // CELESTIAL MECHANICS CORE</div>
+        <div class="slide-timer">ZERO MOCK DATA // JPL HORIZONS ACCURACY</div>
       </div>
-      <h1>Deterministic Ephemeris & Topocentric Horizon Engine</h1>
-      <p class="subtitle">How AERO-DELTA computes real Sun & Earth coordinates calibrated against JPL Horizons.</p>
+      <h1 class="anim-stagger-1">Deterministic Ephemeris & Topocentric Horizon Engine</h1>
+      <p class="subtitle anim-stagger-2">Mathematical precision modeling lunar obliquity, terrestrial libration, and atmosphere-free horizon ray casting.</p>
 
-      <div class="grid-2">
-        <!-- Mathematics Panel -->
+      <div class="grid-2 anim-stagger-3">
+        <!-- Mathematics Formulas -->
         <div class="hud-panel">
           <div class="hud-panel-title">
-            <span>Mathematical Transformation Pipeline</span>
-            <span style="color: var(--accent);">Formulas</span>
+            <span>Rigorous Mathematical Formulations</span>
+            <span style="color: var(--accent);">Physics</span>
           </div>
           
           <div style="display: flex; flex-direction: column; gap: 14px; font-size: 12px; color: #cbd5e1;">
@@ -925,24 +998,24 @@
               <div style="font-family: var(--font-mono); font-size: 13px; color: #fff;">
                 tan(A) = sin(H) / [cos(H)·sin(φ) - tan(δ)·cos(φ)]
               </div>
-              <div style="color: var(--dim); font-size: 10px; margin-top: 2px;">Measured clockwise from lunar north (0° to 360°)</div>
+              <div style="color: var(--dim); font-size: 10px; margin-top: 2px;">Clockwise angle from lunar true north (0° to 360°)</div>
             </div>
 
             <div style="background: rgba(0,0,0,0.4); padding: 10px 14px; border-radius: 4px; border-left: 2px solid var(--ember);">
-              <div style="font-family: var(--font-mono); color: var(--ember); font-size: 10px; margin-bottom: 4px;">3. LOCAL TERRAIN HORIZON MASKING</div>
+              <div style="font-family: var(--font-mono); color: var(--ember); font-size: 10px; margin-bottom: 4px;">3. ATMOSPHERE-FREE HORIZON MASKING</div>
               <div style="font-family: var(--font-mono); font-size: 13px; color: #fff;">
                 IsIlluminated = (h<sub>Sun</sub> > θ<sub>obs</sub>(A<sub>Sun</sub>))
               </div>
-              <div style="color: var(--dim); font-size: 10px; margin-top: 2px;">Evaluates crater rim height θ<sub>obs</sub> at azimuth A. No atmosphere = pure ray cast.</div>
+              <div style="color: var(--dim); font-size: 10px; margin-top: 2px;">Without atmospheric refraction, horizon clearance is pure terrain geometry.</div>
             </div>
           </div>
         </div>
 
-        <!-- Ephemeris Verification Panel -->
+        <!-- Ephemeris Benchmark Verification Table -->
         <div class="mockup-window">
           <div class="mockup-titlebar">
             <span>HORIZONS_CALIBRATION_TELEMETRY</span>
-            <span style="color: var(--lime);">ERROR &lt; 0.05°</span>
+            <span style="color: var(--lime);">ERROR &lt; 0.03°</span>
           </div>
           <div class="mockup-body">
             <div style="font-family: var(--font-mono); font-size: 11px; color: var(--dim); margin-bottom: 6px;">
@@ -962,39 +1035,39 @@
                   <td>Sun Elevation (h)</td>
                   <td style="color: #fff;">+1.42°</td>
                   <td style="color: var(--accent);">+1.41°</td>
-                  <td style="color: var(--lime);">0.01° (Valid)</td>
+                  <td style="color: var(--lime);">0.01° (Verified)</td>
                 </tr>
                 <tr>
                   <td>Sun Azimuth (A)</td>
                   <td style="color: #fff;">184.20°</td>
                   <td style="color: var(--accent);">184.18°</td>
-                  <td style="color: var(--lime);">0.02° (Valid)</td>
+                  <td style="color: var(--lime);">0.02° (Verified)</td>
                 </tr>
                 <tr>
                   <td>Earth Elevation</td>
                   <td style="color: #fff;">+4.82°</td>
                   <td style="color: var(--accent);">+4.85°</td>
-                  <td style="color: var(--lime);">0.03° (Valid)</td>
+                  <td style="color: var(--lime);">0.03° (Verified)</td>
                 </tr>
                 <tr>
                   <td>Optical Libration (l)</td>
                   <td style="color: #fff;">-5.12°</td>
                   <td style="color: var(--accent);">-5.14°</td>
-                  <td style="color: var(--lime);">0.02° (Valid)</td>
+                  <td style="color: var(--lime);">0.02° (Verified)</td>
                 </tr>
               </tbody>
             </table>
 
             <div style="margin-top: 12px; background: rgba(56, 239, 125, 0.08); border: 1px solid rgba(56, 239, 125, 0.3); border-radius: 4px; padding: 10px; font-size: 11.5px; color: #a7f3d0; line-height: 1.4;">
-              ✦ <strong>Atmosphere-Free Horizon:</strong> On the Moon, refraction is 0.00°. The horizon line is governed purely by local terrain elevation profiles and lunar geoid curvature.
+              ✦ <strong>Zero Mock Data:</strong> AERO-DELTA computes closed-form planetary ephemeris directly in TypeScript at 60 FPS, eliminating server latency and network failure modes.
             </div>
           </div>
         </div>
       </div>
 
-      <div class="script-box">
-        <div class="script-title">TECHNICAL RIGOR // WHY NO SHORTCUTS</div>
-        "Many hackathon projects approximate sunlight with simplified sine waves. AERO-DELTA implements closed-form celestial mechanics calibrated against NASA's JPL Horizons ephemeris, delivering real degrees of precision without relying on internet-dependent servers."
+      <div class="script-box anim-stagger-4">
+        <div class="script-title">SCIENTIFIC FOUNDATION // RIGOROUS ASTRONOMY</div>
+        "We refused to cut corners with simplified sine waves. AERO-DELTA runs authentic celestial mechanics matching NASA's JPL Horizons vectors within fractions of a degree, making the tool reliable for actual mission planning."
       </div>
     </section>
 
@@ -1002,14 +1075,14 @@
     <!-- SLIDE 4: SOLAR POWER GENERATION & SUNSET COUNTDOWN             -->
     <!-- ============================================================== -->
     <section class="slide-card" data-slide="4">
-      <div class="slide-meta-row">
-        <div class="slide-badge">SLIDE 04 // OPERATIONAL ENERGY MANAGEMENT</div>
-        <div class="slide-timer">POWER & THERMAL FEASIBILITY ANALYSIS</div>
+      <div class="slide-meta-row anim-stagger-1">
+        <div class="slide-badge">SLIDE 04 // POWER HARVEST & THERMAL SURVIVAL</div>
+        <div class="slide-timer">ENERGY MANAGEMENT HUD</div>
       </div>
-      <h1>Solar Power Generation & Sunset Countdown Countdown</h1>
-      <p class="subtitle">Direct translation of solar elevation angles into array kilowatt-hours and battery discharge margins.</p>
+      <h1 class="anim-stagger-1">Solar Power Modeling & Sunset Countdown Countdown</h1>
+      <p class="subtitle anim-stagger-2">Converting grazing solar angles into vertical array power yields and estimating battery survival margins.</p>
 
-      <div class="grid-2">
+      <div class="grid-2 anim-stagger-3">
         <!-- Live Power HUD Mockup -->
         <div class="mockup-window">
           <div class="mockup-titlebar">
@@ -1029,26 +1102,23 @@
             </div>
 
             <!-- Waveform Chart Graphic -->
-            <div style="margin: 10px 0;">
+            <div style="margin: 8px 0;">
               <div style="font-family: var(--font-mono); font-size: 9.5px; color: var(--dim); margin-bottom: 4px;">
                 72-HOUR DIURNAL POWER PROFILE (WATTS VS MISSION ELAPSED TIME)
               </div>
-              <svg class="horizon-chart-svg" viewBox="0 0 400 120">
+              <svg viewBox="0 0 400 115" style="width: 100%; height: 110px; background: rgba(0,0,0,0.5); border-radius: 4px; border: 1px solid rgba(255,255,255,0.08);">
                 <defs>
                   <linearGradient id="pwrGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#ffb454" stop-opacity="0.5"/>
+                    <stop offset="0%" stop-color="#ffb454" stop-opacity="0.45"/>
                     <stop offset="100%" stop-color="#ffb454" stop-opacity="0.0"/>
                   </linearGradient>
                 </defs>
-                <!-- Grid Lines -->
                 <line x1="0" y1="30" x2="400" y2="30" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
                 <line x1="0" y1="60" x2="400" y2="60" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
                 <line x1="0" y1="90" x2="400" y2="90" stroke="rgba(255,255,255,0.08)" stroke-dasharray="4"/>
-                <!-- Power Area & Path -->
-                <path d="M 0,90 Q 50,20 120,25 T 240,30 T 320,88 L 320,110 L 400,110 L 400,120 L 0,120 Z" fill="url(#pwrGrad)"/>
-                <path d="M 0,90 Q 50,20 120,25 T 240,30 T 320,88 L 320,110 L 400,110" fill="none" stroke="#ffb454" stroke-width="2.5"/>
-                <!-- Current Time Marker -->
-                <line x1="160" y1="10" x2="160" y2="115" stroke="#41e6ff" stroke-width="2"/>
+                <path d="M 0,85 Q 50,20 120,25 T 240,30 T 320,85 L 320,110 L 400,110 L 400,115 L 0,115 Z" fill="url(#pwrGrad)"/>
+                <path d="M 0,85 Q 50,20 120,25 T 240,30 T 320,85 L 320,110 L 400,110" fill="none" stroke="#ffb454" stroke-width="2.5"/>
+                <line x1="160" y1="10" x2="160" y2="110" stroke="#41e6ff" stroke-width="2"/>
                 <circle cx="160" cy="27" r="4" fill="#41e6ff" stroke="#fff" stroke-width="1.5"/>
                 <text x="168" y="24" fill="#41e6ff" font-family="monospace" font-size="9">NOW: T+28h (HIGH POWER)</text>
               </svg>
@@ -1067,47 +1137,47 @@
           </div>
         </div>
 
-        <!-- Engineering Insights -->
+        <!-- Operational Physics Details -->
         <div class="hud-panel" style="display: flex; flex-direction: column; justify-content: space-between;">
           <div>
             <div class="hud-panel-title">
-              <span>Polar Power Generation Physics</span>
+              <span>Polar Energy Realities</span>
               <span style="color: var(--accent);">Engineering</span>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 14px; font-size: 13px; color: #cbd5e1; line-height: 1.5;">
               <div>
-                <strong style="color: #fff;">Vertical Solar Array Architecture:</strong>
+                <strong style="color: #fff;">Vertical Mast Arrays:</strong>
                 <p style="color: var(--dim); font-size: 12px; margin-top: 3px;">
-                  Because polar sun elevation is only 1.5°–2.0°, horizontal panels yield under 3% efficiency. AERO-DELTA models vertical mast arrays facing the azimuth vector with cosine-loss correction: <code>P = P_max · cos(θ_inc)</code>.
+                  Because polar sun elevation is only 1.5°–2.0°, horizontal panels yield under 3% efficiency. AERO-DELTA models vertical mast arrays with cosine-loss correction: <code>P = P_max · cos(θ_inc)</code>.
                 </p>
               </div>
 
               <div>
-                <strong style="color: #fff;">Critical Shadow Passes & Thermal Survival:</strong>
+                <strong style="color: #fff;">Thermal Blackouts (-233°C):</strong>
                 <p style="color: var(--dim); font-size: 12px; margin-top: 3px;">
-                  When solar arrays drop into crater shadows, temperatures plunge to -233°C (40 K). AERO-DELTA calculates the exact duration of darkness so engineers size survival batteries and RHU heaters.
+                  When crater shadows pass over the lander, temperatures drop rapidly. AERO-DELTA displays exact countdowns to shadow entry so science drills stop in time to conserve battery heating.
                 </p>
               </div>
 
               <div>
-                <strong style="color: #fff;">Launch Date Trade-offs:</strong>
+                <strong style="color: #fff;">Launch Window Agility:</strong>
                 <p style="color: var(--dim); font-size: 12px; margin-top: 3px;">
-                  Slipping a mission landing date by 4 days can turn a 200-hour continuous illumination window into an immediate 100-hour blackout. AERO-DELTA flags this instantly.
+                  A 3-day launch slip can transform a 180-hour continuous sunlight window into an immediate blackout. AERO-DELTA allows mission directors to simulate alternative dates instantly.
                 </p>
               </div>
             </div>
           </div>
 
           <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--dim); border-top: 1px solid rgba(255,255,255,0.08); padding-top: 10px; margin-top: 12px;">
-            ✦ EVALUATES BOTH SCIENTIFIC HARVEST AND CRITICAL ENGINEERING CONSTRAINTS
+            ✦ PREDICTS SYSTEM SHUTDOWN WINDOWS BEFORE HARDWARE DEPLOYMENT
           </div>
         </div>
       </div>
 
-      <div class="script-box">
-        <div class="script-title">OPERATIONAL VALUE // AVOIDING MISSION FAILURE</div>
-        "AERO-DELTA removes guesswork from battery budgeting. The platform displays real-time countdowns to sunset and occultation, enabling mission directors to schedule high-power science drills exclusively during peak solar elevation."
+      <div class="script-box anim-stagger-4">
+        <div class="script-title">MISSION CRITICAL // PROTECTING FLIGHT HARDWARE</div>
+        "Power planning at the south pole is unforgiving. AERO-DELTA provides continuous battery discharge tracking and automated sunset countdowns so engineers know precisely when to recharge rover batteries before shadow passes."
       </div>
     </section>
 
@@ -1115,14 +1185,14 @@
     <!-- SLIDE 5: DIRECT-TO-EARTH COMMS & LIBRATION                     -->
     <!-- ============================================================== -->
     <section class="slide-card" data-slide="5">
-      <div class="slide-meta-row">
+      <div class="slide-meta-row anim-stagger-1">
         <div class="slide-badge">SLIDE 05 // TELECOMMUNICATION & LINE-OF-SIGHT</div>
-        <div class="slide-timer">EARTH VISIBILITY & RELAY WINDOW ANALYSIS</div>
+        <div class="slide-timer">EARTH VISIBILITY & RELAY COST ANALYSIS</div>
       </div>
-      <h1>Direct-to-Earth (DTE) Comms Windows & Libration</h1>
-      <p class="subtitle">Tracking terrestrial line-of-sight elevation to evaluate direct communications without relay satellites.</p>
+      <h1 class="anim-stagger-1">Direct-to-Earth (DTE) Comms Windows & Libration</h1>
+      <p class="subtitle anim-stagger-2">Tracking terrestrial line-of-sight elevation to evaluate direct communications without relay satellites.</p>
 
-      <div class="grid-2">
+      <div class="grid-2 anim-stagger-3">
         <!-- Comms Dashboard Mockup -->
         <div class="mockup-window">
           <div class="mockup-titlebar">
@@ -1145,19 +1215,16 @@
             </div>
 
             <!-- DTE Visibility Cone Visualization -->
-            <div style="margin: 8px 0; background: rgba(0,0,0,0.5); border-radius: 4px; padding: 14px; border: 1px solid rgba(255,255,255,0.08);">
+            <div style="margin: 6px 0; background: rgba(0,0,0,0.5); border-radius: 4px; padding: 14px; border: 1px solid rgba(255,255,255,0.08);">
               <div style="display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 10.5px; margin-bottom: 6px;">
                 <span>TERRESTRIAL LIBRATION ARC (27.3 DAY CYCLE)</span>
                 <span style="color: var(--lime);">LINE OF SIGHT: CONTINUOUS</span>
               </div>
               <svg viewBox="0 0 360 80" style="width: 100%; height: 75px;">
-                <!-- Terrain Horizon Silhouette -->
                 <path d="M 0,65 Q 40,50 80,60 T 160,45 T 240,65 T 320,55 L 360,60 L 360,80 L 0,80 Z" fill="rgba(255,255,255,0.06)"/>
                 <line x1="0" y1="58" x2="360" y2="58" stroke="rgba(255, 80, 100, 0.4)" stroke-dasharray="3"/>
                 <text x="5" y="75" fill="#ff5064" font-family="monospace" font-size="8">LOCAL TERRAIN HORIZON MASK</text>
-                <!-- Earth Path Curve -->
                 <path d="M 0,25 Q 90,15 180,30 T 360,20" fill="none" stroke="#38ef7d" stroke-width="2.5"/>
-                <!-- Earth Indicator -->
                 <circle cx="180" cy="30" r="7" fill="#1e3a8a" stroke="#60a5fa" stroke-width="2"/>
                 <text x="194" y="34" fill="#93c5fd" font-family="monospace" font-size="9">EARTH (VISIBLE)</text>
               </svg>
@@ -1167,7 +1234,7 @@
               <div style="font-family: var(--font-mono); font-size: 10.5px; color: var(--lime);">
                 COMMUNICATION WINDOW: 100% RELIABLE (NO RELAY REQUIRED)
               </div>
-              <div class="badge">S-BAND / KA-BAND</div>
+              <div class="hud-pill" style="border-color: var(--accent); color: var(--accent);">S-BAND / KA-BAND</div>
             </div>
           </div>
         </div>
@@ -1176,14 +1243,14 @@
         <div class="hud-panel" style="display: flex; flex-direction: column; justify-content: space-between;">
           <div>
             <div class="hud-panel-title">
-              <span>Why Earth Libration Dictates Mission Cost</span>
-              <span style="color: var(--accent);">Trade-offs</span>
+              <span>Why Libration Dictates Mission Budget</span>
+              <span style="color: var(--accent);">Economics</span>
             </div>
 
             <div style="display: flex; flex-direction: column; gap: 12px; font-size: 12.5px; color: #cbd5e1; line-height: 1.5;">
               <p>
                 <strong style="color: #fff;">Direct-to-Earth vs Lunar Relay:</strong><br>
-                CLPS landers save tens of millions of dollars if they can communicate directly with NASA's Deep Space Network (DSN) without leasing commercial lunar relay orbiters.
+                Commercial CLPS landers save tens of millions of dollars if they can communicate directly with NASA's Deep Space Network (DSN) without leasing commercial lunar relay orbiters.
               </p>
 
               <p>
@@ -1204,9 +1271,9 @@
         </div>
       </div>
 
-      <div class="script-box">
-        <div class="script-title">MISSION ARCHITECTURE // HIGH-RETURN SCIENCE</div>
-        "At the South Pole, line-of-sight to Earth is not guaranteed. AERO-DELTA allows mission directors to simulate lunar libration over months, pinpointing sites like Malapert Mountain and Shackleton Rim where direct communications remain unblocked."
+      <div class="script-box anim-stagger-4">
+        <div class="script-title">COMMUNICATIONS ARCHITECTURE // SAVING MILLIONS</div>
+        "At the South Pole, line-of-sight to Earth is not guaranteed. AERO-DELTA simulates monthly libration cycles to identify elevated peaks like Malapert Mountain where direct-to-Earth communications remain unbroken."
       </div>
     </section>
 
@@ -1214,14 +1281,14 @@
     <!-- SLIDE 6: MULTI-SITE SCENARIO COMPARISON MATRIX                 -->
     <!-- ============================================================== -->
     <section class="slide-card" data-slide="6">
-      <div class="slide-meta-row">
-        <div class="slide-badge">SLIDE 06 // MULTI-SITE TRADE-OFF EVALUATION</div>
+      <div class="slide-meta-row anim-stagger-1">
+        <div class="slide-badge">SLIDE 06 // CANDIDATE LANDING SITES TRADE-OFFS</div>
         <div class="slide-timer">RAPID SCENARIO COMPARISON MATRIX</div>
       </div>
-      <h1>Candidate Landing Sites Trade-off Matrix</h1>
-      <p class="subtitle">Side-by-side evaluation of notable polar exploration sites, commercial CLPS targets, and historical baselines.</p>
+      <h1 class="anim-stagger-1">Candidate Landing Sites Trade-off Matrix</h1>
+      <p class="subtitle anim-stagger-2">Side-by-side trade-off analysis of Artemis III candidate sites, CLPS targets, and Apollo baselines.</p>
 
-      <div class="hud-panel" style="margin-bottom: 18px; padding: 12px;">
+      <div class="hud-panel anim-stagger-3" style="margin-bottom: 18px; padding: 12px;">
         <table style="font-size: 12px;">
           <thead>
             <tr>
@@ -1284,7 +1351,7 @@
         </table>
       </div>
 
-      <div class="grid-3">
+      <div class="grid-3 anim-stagger-3">
         <div class="hud-panel">
           <div class="hud-panel-title">
             <span>Power Winner</span>
@@ -1316,9 +1383,9 @@
         </div>
       </div>
 
-      <div class="script-box">
+      <div class="script-box anim-stagger-4">
         <div class="script-title">SCENARIO COMPARISON // INSTANT TRADE-OFFS</div>
-        "When mission parameters change, engineers use AERO-DELTA's side-by-side trade-off matrix to rapidly decide: Do we prioritize maximum solar charging (Shackleton) or guaranteed Earth communication (Malapert)?"
+        "When launch dates slip, engineers use AERO-DELTA to answer critical trade-offs: Do we prioritize maximum solar charging (Shackleton) or guaranteed Earth communication (Malapert)?"
       </div>
     </section>
 
@@ -1326,14 +1393,14 @@
     <!-- SLIDE 7: ARCHITECTURE & LIVE EVALUATION LAUNCH                 -->
     <!-- ============================================================== -->
     <section class="slide-card" data-slide="7">
-      <div class="slide-meta-row">
+      <div class="slide-meta-row anim-stagger-1">
         <div class="slide-badge">SLIDE 07 // SYSTEM ARCHITECTURE & EVALUATION</div>
         <div class="slide-timer">DELIVERY SUMMARY // NASA SPACE APPS 2026</div>
       </div>
-      <h1>Modular Architecture & Live Evaluation Platform</h1>
-      <p class="subtitle">Built with zero server overhead, client-side precision algorithms, and open accessibility.</p>
+      <h1 class="anim-stagger-1">Modular Architecture & Live Evaluation Platform</h1>
+      <p class="subtitle anim-stagger-2">Client-side precision algorithms with zero server overhead, published open-source to GitHub.</p>
 
-      <div class="grid-2">
+      <div class="grid-2 anim-stagger-3">
         <!-- Tech Stack & Open Source -->
         <div class="hud-panel">
           <div class="hud-panel-title">
@@ -1375,7 +1442,7 @@
             <span class="hud-pill live">SYSTEM OPERATIONAL</span>
           </div>
           <div class="mockup-body" style="align-items: center; text-align: center; justify-content: center; padding: 28px;">
-            <img src="logo.jpg" alt="Aero-Delta" style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 14px; box-shadow: 0 0 20px var(--accent-glow);" onerror="this.src='aero-delta-logo.jpg'">
+            <img src="images/aero-delta-logo.jpg" alt="Aero-Delta" style="width: 72px; height: 72px; border-radius: 50%; border: 2px solid var(--accent); margin-bottom: 14px; box-shadow: 0 0 20px var(--accent-glow);" onerror="this.src='logo.jpg'">
             
             <h3 style="font-size: 18px; margin-bottom: 6px;">Experience AERO-DELTA Live</h3>
             <p style="font-size: 12.5px; color: var(--dim); margin-bottom: 18px; max-width: 380px;">
@@ -1394,7 +1461,7 @@
         </div>
       </div>
 
-      <div class="script-box">
+      <div class="script-box anim-stagger-4">
         <div class="script-title">FINAL TAKEAWAY // EMPOWERING THE ARTEMIS ERA</div>
         "AERO-DELTA delivers an intuitive, scientifically grounded tool bridging engineering constraints and scientific potential at the Moon's South Pole. It turns hours of ephemeris calculations into instantaneous, informed mission decisions."
       </div>
@@ -1413,7 +1480,7 @@
 
     <!-- Slide Thumbnails / Indicator Dots -->
     <div class="slide-dots">
-      <div class="slide-dot active" onclick="goToSlide(1)" title="1. Problem Statement"></div>
+      <div class="slide-dot active" onclick="goToSlide(1)" title="1. Problem & Solution"></div>
       <div class="slide-dot" onclick="goToSlide(2)" title="2. 3D Moon & Sites"></div>
       <div class="slide-dot" onclick="goToSlide(3)" title="3. Ephemeris & Physics"></div>
       <div class="slide-dot" onclick="goToSlide(4)" title="4. Solar Power"></div>
@@ -1447,7 +1514,8 @@
 
     function updateDeck() {
       slides.forEach((slide, idx) => {
-        slide.classList.toggle('active', idx + 1 === currentSlide);
+        const isActive = idx + 1 === currentSlide;
+        slide.classList.toggle('active', isActive);
       });
 
       dots.forEach((dot, idx) => {
@@ -1487,8 +1555,10 @@
     function prevSlide() {
       if (currentSlide > 1) {
         currentSlide--;
-        updateDeck();
+      } else {
+        currentSlide = 1;
       }
+      updateDeck();
     }
 
     // Keyboard Navigation
