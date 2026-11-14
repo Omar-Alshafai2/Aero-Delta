@@ -29,9 +29,9 @@ interface Diff {
 }
 
 const DIFFS: Diff[] = [
-  { key: "cadet", label: "CADET", fuel: 165, padW: 240, drift: 8, rough: 0.55, mult: 1, desc: "WIDE LZ · DEEP TANKS" },
-  { key: "pilot", label: "PILOT", fuel: 125, padW: 150, drift: 15, rough: 1, mult: 2, desc: "NOMINAL PROFILE" },
-  { key: "commander", label: "COMMANDER", fuel: 92, padW: 92, drift: 24, rough: 1.55, mult: 3, desc: "NEEDLE-THREADING" },
+  { key: "cadet", label: "CADET", fuel: 180, padW: 240, drift: 8, rough: 0.55, mult: 1, desc: "WIDE LZ · DEEP TANKS" },
+  { key: "pilot", label: "PILOT", fuel: 140, padW: 150, drift: 15, rough: 1, mult: 2, desc: "NOMINAL PROFILE" },
+  { key: "commander", label: "COMMANDER", fuel: 100, padW: 92, drift: 24, rough: 1.55, mult: 3, desc: "NEEDLE-THREADING" },
 ];
 
 interface Pad { x: number; w: number; label: string }
