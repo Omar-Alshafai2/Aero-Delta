@@ -20,8 +20,8 @@ const CARDS = [
   {
     icon: Zap,
     title: "POWER GENERATION ASSESSMENT",
-    body: "Permanently shadowed craters offer ice but zero solar power. Massif ridges trade ice proximity for near-continuous illumination and kilowatts of harvest.",
-    tag: "POWER // SOLAR HARVEST",
+    body: "Permanently shadowed craters offer ice but zero solar power. Massif ridges trade ice proximity for near-continuous illumination and high incident solar flux.",
+    tag: "POWER // SOLAR IRRADIANCE",
   },
   {
     icon: Mountain,
@@ -35,7 +35,7 @@ const STATS = [
   { icon: Ruler, label: "MEAN DISTANCE · KM", value: 384400, decimals: 0 },
   { icon: Sun, label: "MAX SOLAR ELEVATION · DEG", value: 6.7, decimals: 1 },
   { icon: Timer, label: "LIGHT ROUND-TRIP · S", value: 2.56, decimals: 2 },
-  { icon: Zap, label: "PEAK SOLAR HARVEST · W/M²", value: 1361, decimals: 0 },
+  { icon: Zap, label: "SOLAR IRRADIANCE AT 1 AU · W/M²", value: 1361, decimals: 0 },
 ];
 
 export default function Briefing() {

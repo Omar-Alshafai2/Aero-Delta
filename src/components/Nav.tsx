@@ -3,10 +3,10 @@ import { AnimatePresence, motion, useScroll, useSpring } from "framer-motion";
 import { Menu, Orbit, Rocket, X, Play } from "lucide-react";
 
 const LINKS = [
-  { n: "01", label: "BRIEF", href: "#briefing" },
-  { n: "02", label: "PLANNER", href: "#planner" },
-  { n: "03", label: "SIMULATOR", href: "#simulator" },
-  { n: "04", label: "DYNAMICS", href: "#dynamics" },
+  { n: "01", label: "MISSION BRIEF", href: "#briefing" },
+  { n: "02", label: "MISSION PLANNER", href: "#planner" },
+  { n: "03", label: "DESCENT SIMULATOR", href: "#simulator" },
+  { n: "04", label: "FLIGHT DYNAMICS", href: "#dynamics" },
   { n: "05", label: "LZ ARCHIVE", href: "#sites" },
 ];
 

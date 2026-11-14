@@ -110,7 +110,7 @@ export default function FlightDynamics() {
     <section id="dynamics" className="relative mx-auto max-w-[1500px] scroll-mt-24 px-5 py-28 md:px-10 md:py-40">
       <div className="pointer-events-none absolute left-1/2 top-0 h-px w-full max-w-[1500px] -translate-x-1/2 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
       <SectionHeader
-        index="03"
+        index="04"
         kicker="FLIGHT DYNAMICS"
         title={
           <>

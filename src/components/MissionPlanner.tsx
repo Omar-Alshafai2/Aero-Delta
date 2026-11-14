@@ -97,7 +97,7 @@ const PLANNER_SITES = [
   {
     id: "chandrayaan3",
     name: "STATIO SHIV SHAKTI",
-    region: "SOUTH POLE · 69.4°S",
+    region: "SOUTH POLAR REGION · 69.4°S",
     lat: -69.37,
     lon: 32.35,
     note: "Chandrayaan-3 Vikram landing site (Aug 2023). First south-polar soft landing.",
@@ -1165,7 +1165,7 @@ export default function MissionPlanner() {
             <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2 text-[9.5px] font-mono text-dim">
               <span>SOLAR CONSTANT: 1,361 W/m²</span>
               <span className="text-ink font-bold tabular-nums">
-                HARVEST: {effectiveSolarWatts} W/m²
+                INCIDENT FLUX: {effectiveSolarWatts} W/m²
               </span>
             </div>
           </div>

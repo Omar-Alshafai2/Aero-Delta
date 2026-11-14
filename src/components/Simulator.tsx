@@ -884,8 +884,8 @@ export default function Simulator() {
     <section id="simulator" className="relative mx-auto max-w-[1500px] scroll-mt-24 px-5 py-28 md:px-10 md:py-36">
       <div className="pointer-events-none absolute left-1/2 top-0 h-px w-full max-w-[1500px] -translate-x-1/2 bg-gradient-to-r from-transparent via-white/15 to-transparent" />
       <SectionHeader
-        index="02"
-        kicker="INTERACTIVE TRAINER"
+        index="03"
+        kicker="DESCENT SIMULATOR"
         title={
           <>
             Descent <span className="text-accent glow-accent">simulator</span>
