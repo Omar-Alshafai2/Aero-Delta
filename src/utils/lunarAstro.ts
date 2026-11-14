@@ -73,10 +73,15 @@ export interface AstroResult {
   /** Solar elevation angle (same as sunElevation, alias for clarity) */
   solarElevationAngle: number;
   /**
-   * Power generation potential [0–1].
+   * Power generation potential [0–1] for flat horizontal panel.
    * 0 when Sun is below horizon; scales with sin(elevation) when above.
    */
   powerGenPotential: number;
+  /**
+   * Power generation potential [0–1] for vertical polar solar mast (sun-tracking).
+   * Optimal for lunar south pole low grazing solar angles (scales with cos(elevation)).
+   */
+  powerGenVertical: number;
   /**
    * Communication viability [0–1].
    * 0 when Earth is below horizon; scales with sin(elevation) when above.
@@ -247,6 +252,28 @@ function earthElevationAt(obsLat: number, obsLon: number, jd: number): number {
 }
 
 /**
+ * Angular distance (degrees) from the mean sub-Earth point (0°N, 0°E).
+ * On the lunar sphere: cos(d) = cos(lat) * cos(lon).
+ */
+export function greatCircleDistFromCenter(lat: number, lon: number): number {
+  const oLat = lat * DEG2RAD;
+  const oLon = lon * DEG2RAD;
+  const cosD = Math.cos(oLat) * Math.cos(oLon);
+  return Math.acos(Math.max(-1, Math.min(1, cosD))) * RAD2DEG;
+}
+
+/**
+ * Check if a location is in the permanent radio shadow (permanent far side).
+ * Because lunar libration swings the sub-Earth point up to ~10.5° from (0,0),
+ * sites with angular distance > 100.5° never see Earth.
+ * Sites with angular distance <= 100.5° (which includes all South Pole sites around ~89.5°)
+ * can experience direct-to-Earth visibility depending on libration.
+ */
+export function isPermanentFarSide(lat: number, lon: number): boolean {
+  return greatCircleDistFromCenter(lat, lon) > 100.5;
+}
+
+/**
  * Find the next horizon crossing of a body, starting from startJD.
  *
  * Steps forward by stepDays, looking for a sign change in elevation.
@@ -322,9 +349,10 @@ export function calculateAstro(lat: number, lon: number, date: Date): AstroResul
 
   // ── Horizon flags ───────────────────────────────────────────────────────────
   const sunAboveHorizon = sunPos.elevation > 0;
-  // Far-side constraint: if |observer lon| > 90°, Earth is never above horizon
-  // (the Earth's sub-point librates at most ~9.6° from center, so |lon| > ~90° is safe)
-  const earthAboveHorizon = Math.abs(lon) <= 90 && earthPos.elevation > 0;
+  // Earth visibility: physically determined by whether Earth is above local horizon
+  // and whether the site is outside permanent radio shadow (>100.5° angular dist).
+  const permFarSide = isPermanentFarSide(lat, lon);
+  const earthAboveHorizon = !permFarSide && earthPos.elevation > 0;
 
   // ── Lunar day fraction ──────────────────────────────────────────────────────
   // Fraction of synodic cycle elapsed since the reference new moon
@@ -337,8 +365,7 @@ export function calculateAstro(lat: number, lon: number, date: Date): AstroResul
 
   const sunElevFn = (j: number) => sunElevationAt(lat, lon, j);
   const earthElevFn = (j: number) => {
-    // On far side Earth never rises, keep elevation always negative
-    if (Math.abs(lon) > 90) return -90;
+    if (permFarSide) return -90;
     return earthElevationAt(lat, lon, j);
   };
 
@@ -366,7 +393,7 @@ export function calculateAstro(lat: number, lon: number, date: Date): AstroResul
     }
   }
 
-  if (Math.abs(lon) <= 90) {
+  if (!permFarSide) {
     if (earthAboveHorizon) {
       const setJD = findNextCrossing(earthElevFn, jd, maxSearchDays, stepDays, false);
       if (setJD !== null) {
@@ -386,23 +413,28 @@ export function calculateAstro(lat: number, lon: number, date: Date): AstroResul
 
   // ── Derived quantities ──────────────────────────────────────────────────────
 
-  // Power generation potential: 0 when below horizon; sin-based scaling above.
-  // sin(elevation) gives cosine-of-incidence-angle correction to solar irradiance.
+  // Power generation potential:
+  // Flat horizontal surface array: scales with sin(elevation) [0 when below horizon]
   const powerGenPotential = sunAboveHorizon
     ? Math.max(0, Math.sin(sunPos.elevation * DEG2RAD))
     : 0;
 
-  // Communication viability: same approach for Earth signal strength.
-  const communicationViability =
-    earthAboveHorizon && Math.abs(lon) <= 90
-      ? Math.max(0, Math.sin(earthPos.elevation * DEG2RAD))
-      : 0;
+  // Vertical polar solar mast (sun-tracking): scales with cos(elevation) [0 when below horizon]
+  // In low-elevation polar lighting (elev < 6.7°), cos(elev) yields ~99%+ effective solar collection.
+  const powerGenVertical = sunAboveHorizon
+    ? Math.max(0, Math.cos(sunPos.elevation * DEG2RAD))
+    : 0;
+
+  // Communication viability: Direct-to-Earth signal strength scaling.
+  const communicationViability = earthAboveHorizon
+    ? Math.max(0, Math.sin(earthPos.elevation * DEG2RAD))
+    : 0;
 
   return {
     sunAzimuth: sunPos.azimuth,
     sunElevation: sunPos.elevation,
     earthAzimuth: earthPos.azimuth,
-    earthElevation: earthAboveHorizon ? earthPos.elevation : earthPos.elevation,
+    earthElevation: earthPos.elevation,
     sunAboveHorizon,
     earthAboveHorizon,
     lunarDayFraction,
@@ -412,6 +444,7 @@ export function calculateAstro(lat: number, lon: number, date: Date): AstroResul
     hoursToEarthrise,
     solarElevationAngle: sunPos.elevation,
     powerGenPotential,
+    powerGenVertical,
     communicationViability,
   };
 }
@@ -434,7 +467,7 @@ export function getTimeline(
   const startJD = dateToJD(startDate);
   const totalPoints = Math.ceil((numDays * HOURS_PER_DAY) / TIMELINE_STEP_HOURS) + 1;
   const stepDays = TIMELINE_STEP_HOURS / HOURS_PER_DAY;
-  const farSide = Math.abs(lon) > 90;
+  const permFarSide = isPermanentFarSide(lat, lon);
 
   const timeline: TimelinePoint[] = [];
 
@@ -453,7 +486,7 @@ export function getTimeline(
       sunElevation: sunPos.elevation,
       earthElevation: earthPos.elevation,
       sunAboveHorizon: sunPos.elevation > 0,
-      earthAboveHorizon: !farSide && earthPos.elevation > 0,
+      earthAboveHorizon: !permFarSide && earthPos.elevation > 0,
     });
   }
 
@@ -477,7 +510,7 @@ export function getWindowEvents(
 ): WindowEvent[] {
   const startJD = dateToJD(startDate);
   const stepDays = STEP_HOURS / HOURS_PER_DAY;
-  const farSide = Math.abs(lon) > 90;
+  const permFarSide = isPermanentFarSide(lat, lon);
 
   const events: WindowEvent[] = [];
 
@@ -539,8 +572,8 @@ export function getWindowEvents(
     'sunset'
   );
 
-  // Earth events (only if on near side)
-  if (!farSide) {
+  // Earth events (only if not in permanent radio shadow)
+  if (!permFarSide) {
     scanCrossings(
       (jd) => earthElevationAt(lat, lon, jd),
       'earthrise',
@@ -583,7 +616,7 @@ export function getSunlightHours(lat: number, lon: number, date: Date): number {
  * Calculate total hours of Earth visibility over one full lunar cycle (29.53 days)
  * starting from the given date.
  *
- * Returns 0 for far-side locations (|lon| > 90°).
+ * Returns 0 for permanent far-side locations (>100.5° angular distance from center).
  *
  * @param lat  Observer latitude  (degrees)
  * @param lon  Observer longitude (degrees)
@@ -591,7 +624,7 @@ export function getSunlightHours(lat: number, lon: number, date: Date): number {
  * @returns Total hours of Earth visibility in the upcoming lunar cycle
  */
 export function getEarthVisibilityHours(lat: number, lon: number, date: Date): number {
-  if (Math.abs(lon) > 90) return 0;
+  if (isPermanentFarSide(lat, lon)) return 0;
 
   const startJD = dateToJD(date);
   const stepHours = 0.25;
@@ -611,7 +644,7 @@ export function getEarthVisibilityHours(lat: number, lon: number, date: Date): n
 // ─── Official NASA & International Data Resource Link Generators ───────────────
 
 export const LROC_QUICKMAP_BASE_URL =
-  "https://quickmap.lroc.im-ldi.com/?prjExtent=-3604618.1818776%2C-1784076.8361152%2C4260663.8247585%2C1699661.4160202&earthShadowEnabled=true&proj=10&stack=3314&defs=N4IgzGCMAsIFygPYAcCGBjAlgFwJ70gF9Cg";
+  "https://quickmap.lroc.asu.edu/?prjExtent=-3604618.1818776%2C-1784076.8361152%2C4260663.8247585%2C1699661.4160202&earthShadowEnabled=true&proj=10&stack=3314&defs=N4IgzGCMAsIFygPYAcCGBjAlgFwJ70gF9Cg";
 
 export const NASA_MOON_TREK_URL = "https://trek.nasa.gov/moon/";
 
@@ -629,10 +662,10 @@ export const CSA_MOON_EXPLORATION_URL =
 export function getLROCQuickMapUrl(lat: number, lon: number): string {
   if (lat <= -60) {
     // South Pole Polar Stereographic with LOLA shaded relief & Earth Shadow enabled
-    return `https://quickmap.lroc.im-ldi.com/?prjExtent=-3604618.1818776%2C-1784076.8361152%2C4260663.8247585%2C1699661.4160202&earthShadowEnabled=true&proj=10&stack=3314&defs=N4IgzGCMAsIFygPYAcCGBjAlgFwJ70gF9Cg&center=${lon.toFixed(4)}%2C${lat.toFixed(4)}`;
+    return `https://quickmap.lroc.asu.edu/?prjExtent=-3604618.1818776%2C-1784076.8361152%2C4260663.8247585%2C1699661.4160202&earthShadowEnabled=true&proj=10&stack=3314&defs=N4IgzGCMAsIFygPYAcCGBjAlgFwJ70gF9Cg&center=${lon.toFixed(4)}%2C${lat.toFixed(4)}`;
   }
   // Equatorial / mid-latitude sites
-  return `https://quickmap.lroc.im-ldi.com/?proj=2&lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&zoom=8`;
+  return `https://quickmap.lroc.asu.edu/?proj=2&lat=${lat.toFixed(4)}&lon=${lon.toFixed(4)}&zoom=8`;
 }
 
 /**

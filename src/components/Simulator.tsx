@@ -26,12 +26,55 @@ interface Diff {
   rough: number;
   mult: number;
   desc: string;
+  maxVy: number;
+  maxVx: number;
+  maxTiltDeg: number;
+  burnRate: number;
 }
 
 const DIFFS: Diff[] = [
-  { key: "cadet", label: "CADET", fuel: 180, padW: 240, drift: 8, rough: 0.55, mult: 1, desc: "WIDE LZ · DEEP TANKS" },
-  { key: "pilot", label: "PILOT", fuel: 140, padW: 150, drift: 15, rough: 1, mult: 2, desc: "NOMINAL PROFILE" },
-  { key: "commander", label: "COMMANDER", fuel: 100, padW: 92, drift: 24, rough: 1.55, mult: 3, desc: "NEEDLE-THREADING" },
+  {
+    key: "cadet",
+    label: "CADET",
+    fuel: 260,
+    padW: 280,
+    drift: 6,
+    rough: 0.45,
+    mult: 1,
+    desc: "WIDE LZ · DEEP TANKS · STABILIZED SAS",
+    maxVy: 4.2,
+    maxVx: 3.4,
+    maxTiltDeg: 24,
+    burnRate: 6.8,
+  },
+  {
+    key: "pilot",
+    label: "PILOT",
+    fuel: 190,
+    padW: 190,
+    drift: 12,
+    rough: 0.85,
+    mult: 2,
+    desc: "NOMINAL APOLLO P66 PROFILE",
+    maxVy: 3.2,
+    maxVx: 2.4,
+    maxTiltDeg: 18,
+    burnRate: 8.2,
+  },
+  {
+    key: "commander",
+    label: "COMMANDER",
+    fuel: 130,
+    padW: 110,
+    drift: 20,
+    rough: 1.4,
+    mult: 3,
+    desc: "TIGHT FUEL MARGIN · NEEDLE-THREADING",
+    maxVy: 2.5,
+    maxVx: 1.8,
+    maxTiltDeg: 13,
+    burnRate: 9.5,
+  },
 ];
 
 interface Pad { x: number; w: number; label: string }
@@ -153,8 +196,8 @@ class Sfx {
 const SEG = 20;
 const W = 7200;
 const N = Math.floor(W / SEG) + 1;
-const GRAV = 6.8;
-const THRUST_A = 14.4;
+const GRAV = 6.4;
+const THRUST_A = 15.6;
 const ROT = 1.9;
 const FOOT = 7.6;
 
@@ -269,10 +312,11 @@ export default function Simulator() {
     g.terrain = makeTerrain(d.rough, g.pads);
     g.target = Math.random() < 0.5 ? p2 : Math.random() < 0.5 ? p1 : p3;
     const dir = Math.random() < 0.5 ? -1 : 1;
-    g.x = g.target.x + g.target.w / 2 + dir * (620 + Math.random() * 520);
-    g.y = -980;
-    g.vx = -dir * d.drift * (0.8 + Math.random() * 0.7);
-    g.vy = 4;
+    const spawnDist = d.key === "cadet" ? (260 + Math.random() * 180) : d.key === "pilot" ? (380 + Math.random() * 220) : (520 + Math.random() * 280);
+    g.x = g.target.x + g.target.w / 2 + dir * spawnDist;
+    g.y = d.key === "cadet" ? -680 : -760;
+    g.vx = -dir * d.drift * (0.6 + Math.random() * 0.5);
+    g.vy = 3.0;
     g.theta = 0;
     g.fuel = d.fuel;
     g.fuelMax = d.fuel;
@@ -389,14 +433,18 @@ export default function Simulator() {
         sfxRef.current.engine(g.phase === "flying" ? g.thrust : 0);
 
         if (wantThrust) {
-          g.fuel = Math.max(0, g.fuel - dt * 9.5);
+          g.fuel = Math.max(0, g.fuel - dt * d.burnRate);
         }
         const rotIn =
           (keys.has("ArrowRight") || keys.has("KeyD") ? 1 : 0) -
           (keys.has("ArrowLeft") || keys.has("KeyA") ? 1 : 0);
-        g.theta += rotIn * ROT * dt;
-        g.theta -= g.theta * 0.45 * dt; // RCS damping
-        g.theta = Math.max(-1.2, Math.min(1.2, g.theta));
+        if (rotIn !== 0) {
+          g.theta += rotIn * ROT * dt;
+        } else {
+          // SAS Attitude Hold: actively restores vehicle to upright when steering is released
+          g.theta -= g.theta * (d.key === "cadet" ? 3.4 : 2.4) * dt;
+        }
+        g.theta = Math.max(-1.1, Math.min(1.1, g.theta));
 
         const ta = THRUST_A * g.thrust;
         g.vx += Math.sin(g.theta) * ta * dt;
@@ -465,57 +513,61 @@ export default function Simulator() {
         // contact
         if (g.y + FOOT >= gy && g.vy > 0) {
           const pad = g.pads.find(
-            (p) => g.x > p.x + 6 && g.x < p.x + p.w - 6 && Math.abs(gy) < 0.5
+            (p) => g.x >= p.x - 6 && g.x <= p.x + p.w + 6
           );
-          const vy = g.vy, vx = g.vx, th = Math.abs(g.theta);
-          const softOk = vy <= 2.6 && Math.abs(vx) <= 2.0 && th <= 0.26;
-          const gentle = vy <= 1.1 && Math.abs(vx) <= 0.9 && th <= 0.12;
+          const vy = g.vy;
+          const vx = Math.abs(g.vx);
+          const th = Math.abs(g.theta);
+          const thDeg = (th * 180) / Math.PI;
+
+          const softOk = vy <= d.maxVy && vx <= d.maxVx && thDeg <= d.maxTiltDeg;
+          const firmOk = vy <= d.maxVy * 1.35 && vx <= d.maxVx * 1.35 && thDeg <= d.maxTiltDeg * 1.35;
 
           if (pad && softOk) {
             g.phase = "landed";
             g.y = gy - FOOT;
-            const soft = Math.max(0, (2.6 - vy) / 2.6);
+            const softScore = Math.max(0, (d.maxVy - vy) / d.maxVy);
             const score = Math.round(
-              (500 + soft * 600 + (g.fuel / g.fuelMax) * 400) * d.mult
+              (500 + softScore * 500 + (g.fuel / g.fuelMax) * 400) * d.mult
             );
             const rating =
-              vy <= 0.9 && Math.abs(vx) <= 0.6 && th <= 0.07
-                ? "PERFECT // THE EAGLE SMILES"
-                : vy <= 1.7
-                  ? "NOMINAL TOUCHDOWN"
-                  : "HARD LANDING // CREW OK";
+              vy <= d.maxVy * 0.45 && vx <= d.maxVx * 0.45 && thDeg <= 6
+                ? "PERFECT // THE EAGLE HAS LANDED"
+                : vy <= d.maxVy * 0.8
+                  ? "NOMINAL TOUCHDOWN // SMOOTH DESCENT"
+                  : "FIRM TOUCHDOWN // SHOCKS COMPRESSED";
             pushLog("GUID", "CONTACT LIGHT // ENGINE STOP", "ok");
             sfxRef.current.engine(0);
             sfxRef.current.success();
             setResult({
               ok: true, title: "TOUCHDOWN CONFIRMED", detail: rating, score,
-              vs: vy, hs: Math.abs(vx), tilt: (th * 180) / Math.PI,
+              vs: vy, hs: vx, tilt: thDeg,
               fuelPct: (g.fuel / g.fuelMax) * 100,
             });
             setPhase("landed");
-          } else if (pad && gentle) {
+          } else if (pad && firmOk) {
             g.phase = "landed";
             g.y = gy - FOOT;
-            const score = Math.round((420 + (g.fuel / g.fuelMax) * 300) * d.mult);
-            pushLog("GUID", "TOUCHDOWN // ROUGH BUT STANDING", "ok");
+            const score = Math.round((360 + (g.fuel / g.fuelMax) * 260) * d.mult);
+            pushLog("GUID", "HARD LANDING // GEAR COMPRESSED", "warn");
             sfxRef.current.engine(0);
             sfxRef.current.success();
             setResult({
-              ok: true, title: "TOUCHDOWN CONFIRMED", detail: "OFF-NOMINAL // VEHICLE STANDING", score,
-              vs: vy, hs: Math.abs(vx), tilt: (th * 180) / Math.PI,
+              ok: true, title: "HARD LANDING // VEHICLE INTACT", detail: "SURVIVABLE TOUCHDOWN // OFF-NOMINAL VELOCITY", score,
+              vs: vy, hs: vx, tilt: thDeg,
               fuelPct: (g.fuel / g.fuelMax) * 100,
             });
             setPhase("landed");
-          } else if (!pad && gentle) {
+          } else if (!pad && (softOk || firmOk)) {
             g.phase = "landed";
             g.y = gy - FOOT;
-            const score = Math.round(150 * d.mult);
-            pushLog("GUID", "HAZARDOUS TOUCHDOWN // OFF LZ", "warn");
+            const score = Math.round(200 * d.mult);
+            pushLog("GUID", "ROUGH REGOLITH // OFF LZ TOUCHDOWN", "warn");
             sfxRef.current.engine(0);
             sfxRef.current.success();
             setResult({
-              ok: true, title: "DOWN // OFF TARGET", detail: "HAZARDOUS TOUCHDOWN // PARTIAL CREDIT", score,
-              vs: vy, hs: Math.abs(vx), tilt: (th * 180) / Math.PI,
+              ok: true, title: "DOWN IN REGOLITH // OFF LZ", detail: "VEHICLE STANDING ON LUNAR TERRAIN // MISSION CONTINUES", score,
+              vs: vy, hs: vx, tilt: thDeg,
               fuelPct: (g.fuel / g.fuelMax) * 100,
             });
             setPhase("landed");
@@ -524,14 +576,14 @@ export default function Simulator() {
             g.dead = true;
             g.shake = 16;
             g.flash = 1;
-            const reason = !pad
-              ? "TERRAIN IMPACT // OUTSIDE DESIGNATED LZ"
-              : vy > 2.6
-                ? "EXCESS DESCENT RATE // STRUCTURE CRUSHED"
-                : Math.abs(vx) > 2.0
-                  ? "LATERAL VELOCITY // LANDER SLID & ROLLED"
-                  : "ATTITUDE LIMIT // TIPPED ON CONTACT";
-            pushLog("WARN", "TELEMETRY LOST // CARRIER DROP", "danger");
+            const reason = !pad && (vy > d.maxVy * 1.35 || vx > d.maxVx * 1.35)
+              ? "TERRAIN IMPACT // EXCESS IMPACT RATE OUTSIDE LZ"
+              : vy > d.maxVy * 1.35
+                ? `EXCESS DESCENT RATE // ${vy.toFixed(1)} M/S (MAX ${(d.maxVy * 1.35).toFixed(1)} M/S)`
+                : vx > d.maxVx * 1.35
+                  ? `LATERAL DRIFT // ${vx.toFixed(1)} M/S INDUCED ROLLOVER`
+                  : `ATTITUDE EXCEEDED // ${thDeg.toFixed(0)}° TILT TIPPED LANDER`;
+            pushLog("WARN", "TELEMETRY LOST // STRUCTURAL BREAKUP", "danger");
             sfxRef.current.engine(0);
             sfxRef.current.crash();
             for (let i = 0; i < 90; i++) {
@@ -546,7 +598,7 @@ export default function Simulator() {
             }
             setResult({
               ok: false, title: "IMPACT // VEHICLE LOST", detail: reason, score: 0,
-              vs: vy, hs: Math.abs(vx), tilt: (th * 180) / Math.PI,
+              vs: vy, hs: vx, tilt: thDeg,
               fuelPct: (g.fuel / g.fuelMax) * 100,
             });
             setPhase("crashed");
@@ -891,7 +943,7 @@ export default function Simulator() {
             Descent <span className="text-accent glow-accent">simulator</span>
           </>
         }
-        copy="A real physics sandbox running lunar ballistics. Pulse the descent engine, manage your tilt, and set the vehicle down inside the blinking LZ — under 2.6 m/s vertical, 2.0 m/s lateral, within 15° of vertical. Fuel is finite. Regolith is not forgiving."
+        copy="A real physics sandbox running lunar ballistics with Apollo SAS attitude stabilization. Pulse the descent engine, control your approach vector, and touch down inside the designated LZ. Fly Cadet for training margins, Pilot for nominal Apollo P66 gate, or Commander for needle-threading."
       />
 
       {/* toolbar */}

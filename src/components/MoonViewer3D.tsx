@@ -290,8 +290,6 @@ export default function MoonViewer3D({
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure = 1.25;
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     container.innerHTML = "";
     container.appendChild(renderer.domElement);
 
@@ -310,11 +308,7 @@ export default function MoonViewer3D({
 
     // Directional Sun Light
     const sunLight = new THREE.DirectionalLight(0xfff7e6, 3.8);
-    sunLight.castShadow = true;
-    sunLight.shadow.mapSize.width = 2048;
-    sunLight.shadow.mapSize.height = 2048;
     scene.add(sunLight);
-    scene.add(sunLight.target);
     sunLightRef.current = sunLight;
 
     // Texture Loader
@@ -433,8 +427,6 @@ export default function MoonViewer3D({
       metalness: 0.04,
     });
     const moonSphere = new THREE.Mesh(proceduralGeo, proceduralMat);
-    moonSphere.receiveShadow = true;
-    moonSphere.castShadow = true;
     scene.add(moonSphere);
 
     // ─────────────────────────────────────────────────────────────

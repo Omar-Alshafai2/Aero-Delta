@@ -17,7 +17,6 @@ interface LunarSurfaceViewer3DProps {
   earthAboveHorizon: boolean;
   powerGenPotential: number;
   stlUrl?: string;
-  useVerticalMast?: boolean;
 }
 
 export default function LunarSurfaceViewer3D({
@@ -32,7 +31,6 @@ export default function LunarSurfaceViewer3D({
   earthAboveHorizon,
   powerGenPotential,
   stlUrl,
-  useVerticalMast = true,
 }: LunarSurfaceViewer3DProps) {
   const mountRef = useRef<HTMLDivElement>(null);
   const [cameraMode, setCameraMode] = useState<"horizon" | "orbit" | "sol" | "earth">("horizon");
@@ -47,8 +45,6 @@ export default function LunarSurfaceViewer3D({
   const earthGroupRef = useRef<THREE.Group | null>(null);
   const commLaserRef = useRef<THREE.Line | null>(null);
   const terrainRootRef = useRef<THREE.Group | null>(null);
-  const solarMastGroupRef = useRef<THREE.Group | null>(null);
-  const landerYRef = useRef<number>(0);
 
   // Generate site-specific lunar surface topography (South Pole vs Mare vs Massifs)
   const createProceduralTerrain = (name: string, siteLat: number): THREE.BufferGeometry => {
@@ -93,53 +89,6 @@ export default function LunarSurfaceViewer3D({
     }
     geo.computeVertexNormals();
     return geo;
-  };
-
-  // Helper to create high-contrast text badge billboard sprites
-  const createLabelSprite = (text: string, color: string): THREE.Sprite => {
-    const canvas = document.createElement("canvas");
-    canvas.width = 300;
-    canvas.height = 64;
-    const ctx = canvas.getContext("2d")!;
-    ctx.clearRect(0, 0, 300, 64);
-
-    // Pill background
-    ctx.fillStyle = "rgba(4, 7, 18, 0.90)";
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 2.5;
-
-    const r = 8;
-    const x = 6, y = 8, w = 288, h = 48;
-    ctx.beginPath();
-    ctx.moveTo(x + r, y);
-    ctx.lineTo(x + w - r, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
-    ctx.lineTo(x + w, y + h - r);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-    ctx.lineTo(x + r, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
-    ctx.lineTo(x, y + r);
-    ctx.quadraticCurveTo(x, y, x + r, y);
-    ctx.closePath();
-    ctx.fill();
-    ctx.stroke();
-
-    // Text
-    ctx.fillStyle = color;
-    ctx.font = "bold 15px monospace";
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, 150, 32);
-
-    const texture = new THREE.CanvasTexture(canvas);
-    const spriteMat = new THREE.SpriteMaterial({
-      map: texture,
-      transparent: true,
-      depthTest: false,
-    });
-    const sprite = new THREE.Sprite(spriteMat);
-    sprite.scale.set(1.4, 0.3, 1);
-    return sprite;
   };
 
   useEffect(() => {
@@ -197,8 +146,6 @@ export default function LunarSurfaceViewer3D({
     sunLight.shadow.camera.bottom = -d;
     sunLight.shadow.bias = -0.0008;
     scene.add(sunLight);
-    scene.add(sunLight.target);
-    sunLight.target.position.set(0, 0.4, 0);
     sunLightRef.current = sunLight;
 
     // Texture Loader for NASA textures
@@ -367,7 +314,6 @@ export default function LunarSurfaceViewer3D({
           const s = 1.1 / (maxDim || 1);
           lm.scale.set(s, s, s);
           lm.position.set(0, yPosition, 0);
-          landerYRef.current = yPosition;
           lm.traverse((child) => {
             if ((child as THREE.Mesh).isMesh) {
               child.castShadow = true;
@@ -542,133 +488,6 @@ export default function LunarSurfaceViewer3D({
     };
   }, [stlUrl, siteName, lat, lon]);
 
-  // Render / Update Vertical Solar Mast (VIPER) vs Flat Ground Array with Dynamic Shadows
-  useEffect(() => {
-    const terrainRoot = terrainRootRef.current;
-    if (!terrainRoot) return;
-
-    if (solarMastGroupRef.current) {
-      terrainRoot.remove(solarMastGroupRef.current);
-      solarMastGroupRef.current = null;
-    }
-
-    const y = landerYRef.current || 0;
-    const arrayGroup = new THREE.Group();
-    arrayGroup.name = "solarArray";
-    const posX = -1.35;
-    const posZ = 0.85;
-
-    if (useVerticalMast) {
-      // ─────────────────────────────────────────────────────────
-      // 🛰️ VERTICAL SOLAR MAST (VIPER / ARTEMIS POLAR STANDARD)
-      // ─────────────────────────────────────────────────────────
-      // Stands tall perpendicular to regolith to intercept horizontal polar sunbeams with cos(θ) ≈ 99.9%
-      const mastPoleGeo = new THREE.CylinderGeometry(0.02, 0.02, 1.8, 12);
-      const mastPoleMat = new THREE.MeshStandardMaterial({
-        color: 0x3a4254,
-        metalness: 0.8,
-        roughness: 0.3,
-      });
-      const pole = new THREE.Mesh(mastPoleGeo, mastPoleMat);
-      pole.position.set(posX, y + 0.9, posZ);
-      pole.castShadow = true;
-      pole.receiveShadow = true;
-      arrayGroup.add(pole);
-
-      // Tripod support base
-      for (let i = 0; i < 3; i++) {
-        const ang = (i * Math.PI * 2) / 3;
-        const legGeo = new THREE.CylinderGeometry(0.008, 0.008, 0.45, 8);
-        const legMat = new THREE.MeshStandardMaterial({ color: 0x252a38, metalness: 0.7 });
-        const leg = new THREE.Mesh(legGeo, legMat);
-        leg.position.set(posX + Math.cos(ang) * 0.16, y + 0.12, posZ + Math.sin(ang) * 0.16);
-        leg.rotation.z = Math.cos(ang) * 0.5;
-        leg.rotation.x = Math.sin(ang) * 0.5;
-        leg.castShadow = true;
-        arrayGroup.add(leg);
-      }
-
-      // Vertical 4-wing solar cell panels (cross configuration)
-      for (let w = 0; w < 4; w++) {
-        const wingAng = (w * Math.PI) / 2;
-        const wingGeo = new THREE.BoxGeometry(0.24, 1.25, 0.015);
-        const cellMat = new THREE.MeshStandardMaterial({
-          color: 0x0f2742,
-          roughness: 0.25,
-          metalness: 0.85,
-        });
-        const wing = new THREE.Mesh(wingGeo, cellMat);
-        wing.position.set(
-          posX + Math.cos(wingAng) * 0.14,
-          y + 1.1,
-          posZ + Math.sin(wingAng) * 0.14
-        );
-        wing.rotation.y = wingAng;
-        wing.castShadow = true;
-        wing.receiveShadow = true;
-        arrayGroup.add(wing);
-
-        // Gold MLI foil backing
-        const foilGeo = new THREE.BoxGeometry(0.24, 1.25, 0.005);
-        const foilMat = new THREE.MeshStandardMaterial({
-          color: 0xd4af37,
-          metalness: 0.9,
-          roughness: 0.3,
-        });
-        const foil = new THREE.Mesh(foilGeo, foilMat);
-        foil.position.copy(wing.position);
-        foil.rotation.y = wingAng;
-        foil.castShadow = true;
-        arrayGroup.add(foil);
-      }
-
-      // Top optical sun tracker sensor
-      const sensorGeo = new THREE.SphereGeometry(0.035, 12, 12);
-      const sensorMat = new THREE.MeshBasicMaterial({ color: 0x41e6ff });
-      const sensor = new THREE.Mesh(sensorGeo, sensorMat);
-      sensor.position.set(posX, y + 1.82, posZ);
-      arrayGroup.add(sensor);
-
-      // HUD Label Sprite above mast
-      const label = createLabelSprite("VIPER VERTICAL MAST · 99.9% EFF", "#41e6ff");
-      label.position.set(posX, y + 2.05, posZ);
-      label.scale.set(1.5, 0.32, 1);
-      arrayGroup.add(label);
-    } else {
-      // ─────────────────────────────────────────────────────────
-      // 🏜️ FLAT GROUND PANEL (HORIZONTAL SURFACES SUFFER GRAZING LOSS)
-      // ─────────────────────────────────────────────────────────
-      // Lays flat on regolith; normal points to zenith, suffering sin(θ) ≈ 3.5% flux at 2°
-      const blanketGeo = new THREE.BoxGeometry(0.85, 0.012, 0.85);
-      const blanketMat = new THREE.MeshStandardMaterial({
-        color: 0x182436,
-        roughness: 0.5,
-        metalness: 0.6,
-      });
-      const blanket = new THREE.Mesh(blanketGeo, blanketMat);
-      blanket.position.set(posX, y + 0.01, posZ);
-      blanket.castShadow = true;
-      blanket.receiveShadow = true;
-      arrayGroup.add(blanket);
-
-      // Grid wirelines
-      const frameGeo = new THREE.BoxGeometry(0.88, 0.016, 0.88);
-      const frameMat = new THREE.MeshBasicMaterial({ color: 0x4a5568, wireframe: true });
-      const frame = new THREE.Mesh(frameGeo, frameMat);
-      frame.position.copy(blanket.position);
-      arrayGroup.add(frame);
-
-      // HUD Label Sprite above flat panel
-      const label = createLabelSprite("FLAT GROUND PANEL · 3.5% EFF", "#ffb454");
-      label.position.set(posX, y + 0.45, posZ);
-      label.scale.set(1.5, 0.32, 1);
-      arrayGroup.add(label);
-    }
-
-    terrainRoot.add(arrayGroup);
-    solarMastGroupRef.current = arrayGroup;
-  }, [useVerticalMast, loading]);
-
   // Update Dynamic Positions of Sun, Earth & Comms Line
   useEffect(() => {
     const sunGroup = sunGroupRef.current;
@@ -694,8 +513,8 @@ export default function LunarSurfaceViewer3D({
 
     if (sunLight) {
       sunLight.position.set(sunX, sunY, sunZ);
-      // On the Moon in vacuum, unattenuated direct solar irradiance casts sharp shadows whenever Sol is above the horizon
-      sunLight.intensity = sunAboveHorizon ? 4.5 : 0.04;
+      // If sun is below horizon, dim the light completely
+      sunLight.intensity = sunAboveHorizon ? 4.2 * Math.max(0.15, Math.sin(elRad)) : 0.1;
     }
 
     // Earth Position

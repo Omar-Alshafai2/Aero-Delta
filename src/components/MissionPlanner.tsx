@@ -20,11 +20,8 @@ import {
   Copy,
   Check,
   CheckCircle2,
-  Play,
-  Pause,
-  RotateCcw,
-  Sliders,
-  Sparkles,
+  Download,
+  FileText,
 } from "lucide-react";
 import SectionHeader from "./SectionHeader";
 import MoonViewer3D from "./MoonViewer3D";
@@ -534,16 +531,72 @@ export default function MissionPlanner() {
   const [showHorizonsAudit, setShowHorizonsAudit] = useState(false);
   const [copiedScript, setCopiedScript] = useState(false);
   const [horizonsApiTestState, setHorizonsApiTestState] = useState<"idle" | "testing" | "verified">("idle");
+  const [arrayConfig, setArrayConfig] = useState<"vertical" | "horizontal">("vertical");
 
-  // ── 29.5-Day Synodic Lunar Day Timelapse & Vertical Mast State ─────────────
-  const SYNODIC_MONTH_HOURS = 29.530589 * 24; // 708.734 hours in one synodic lunar day
-  const [timelapseActive, setTimelapseActive] = useState(false);
-  const [timelapseOffsetHours, setTimelapseOffsetHours] = useState(0);
-  const [timelapseSpeed, setTimelapseSpeed] = useState<number>(1); // 1x = ~18s full 29.5-day revolution
-  const [useVerticalMast, setUseVerticalMast] = useState(true); // Default to NASA VIPER vertical mast
-
-  const animFrameRef = useRef<number | null>(null);
-  const lastTimeRef = useRef<number | null>(null);
+  const exportMissionTelemetry = (format: "json" | "csv") => {
+    const site = getActiveSite();
+    const dateStr = selectedDate;
+    if (format === "json") {
+      const data = {
+        mission: "AERO-DELTA",
+        challenge: "NASA International Space Apps Challenge",
+        targetSite: site.name,
+        region: site.region,
+        coordinates: { latitude: site.lat, longitude: site.lon },
+        epochUTC: dateStr + "T12:00:00Z",
+        ephemeris: {
+          solarAzimuthDeg: parseFloat(astro.sunAzimuth.toFixed(2)),
+          solarElevationDeg: parseFloat(astro.sunElevation.toFixed(2)),
+          solarPowerHorizontalPct: parseFloat((astro.powerGenPotential * 100).toFixed(1)),
+          solarPowerVerticalMastPct: parseFloat((astro.powerGenVertical * 100).toFixed(1)),
+          earthAzimuthDeg: parseFloat(astro.earthAzimuth.toFixed(2)),
+          earthElevationDeg: parseFloat(astro.earthElevation.toFixed(2)),
+          earthVisibleDTE: astro.earthAboveHorizon,
+          communicationViabilityPct: parseFloat((astro.communicationViability * 100).toFixed(1)),
+          hoursToSunset: astro.hoursToSunset,
+          hoursToSunrise: astro.hoursToSunrise,
+          hoursToEarthset: astro.hoursToEarthset,
+          hoursToEarthrise: astro.hoursToEarthrise,
+        },
+        provenance: "Analytical topocentric J2000 celestial mechanics calibrated against NASA JPL Horizons coord@301",
+      };
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `AeroDelta_${site.id}_${dateStr}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } else {
+      const csv =
+        "Parameter,Value,Unit\n" +
+        `Site,${site.name},-\n` +
+        `Region,${site.region},-\n` +
+        `Latitude,${site.lat},deg\n` +
+        `Longitude,${site.lon},deg\n` +
+        `Epoch UTC,${dateStr}T12:00:00Z,-\n` +
+        `Sun Azimuth,${astro.sunAzimuth.toFixed(2)},deg\n` +
+        `Sun Elevation,${astro.sunElevation.toFixed(2)},deg\n` +
+        `Sun Above Horizon,${astro.sunAboveHorizon},boolean\n` +
+        `Solar Harvest (Horizontal Panel),${(astro.powerGenPotential * 100).toFixed(1)},%\n` +
+        `Solar Harvest (Vertical Polar Mast),${(astro.powerGenVertical * 100).toFixed(1)},%\n` +
+        `Earth Azimuth,${astro.earthAzimuth.toFixed(2)},deg\n` +
+        `Earth Elevation,${astro.earthElevation.toFixed(2)},deg\n` +
+        `Earth Line-of-Sight (DTE),${astro.earthAboveHorizon},boolean\n` +
+        `Comms Quality,${(astro.communicationViability * 100).toFixed(1)},%\n` +
+        `Hours to Next Sunset,${astro.hoursToSunset ?? "N/A"},hours\n` +
+        `Hours to Next Sunrise,${astro.hoursToSunrise ?? "N/A"},hours\n` +
+        `Hours to Next Earthset,${astro.hoursToEarthset ?? "N/A"},hours\n` +
+        `Hours to Next Earthrise,${astro.hoursToEarthrise ?? "N/A"},hours\n`;
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `AeroDelta_${site.id}_${dateStr}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  };
 
   const skyplotRef = useRef<HTMLCanvasElement>(null);
   const timelineRef = useRef<HTMLCanvasElement>(null);
@@ -555,91 +608,17 @@ export default function MissionPlanner() {
     return s;
   }, [activeSiteId, customLat, customLon]);
 
-  // Current simulation date (incorporating real-time 29.5-day timelapse progression)
-  const getSimDate = useCallback(() => {
-    const base = new Date(selectedDate + "T12:00:00Z");
-    if (timelapseOffsetHours === 0) return base;
-    return new Date(base.getTime() + timelapseOffsetHours * 3600 * 1000);
-  }, [selectedDate, timelapseOffsetHours]);
-
-  const getDate = getSimDate;
+  const getDate = () => new Date(selectedDate + "T12:00:00Z");
 
   const astro = (() => {
     const site = getActiveSite();
-    return calculateAstro(site.lat, site.lon, getSimDate());
+    return calculateAstro(site.lat, site.lon, getDate());
   })();
 
   const compareAstro = (() => {
     const s = PLANNER_SITES.find((s) => s.id === compareSiteId)!;
-    return calculateAstro(s.lat, s.lon, getSimDate());
+    return calculateAstro(s.lat, s.lon, getDate());
   })();
-
-  // ── Vertical Solar Mast vs Flat Ground Array Calculations ──────────────────
-  // At the Lunar South Pole (lat ≈ -85° to -90°), Sun elevation θ is only 1.5°–6.7° above the horizon.
-  // - Flat ground panel: normal points to zenith, captures incident flux factor = sin(θ) ≈ 3.5% at 2°
-  // - Vertical solar mast (NASA VIPER / CLPS standard): normal intercepts horizontal polar beams,
-  //   captures incident flux factor = cos(θ) ≈ 99.9% at 2°
-  const effectivePowerFactor = astro.sunAboveHorizon
-    ? (useVerticalMast
-        ? Math.max(0, Math.cos(astro.sunElevation * (Math.PI / 180)))
-        : astro.powerGenPotential)
-    : 0;
-
-  const compareEffectivePowerFactor = compareAstro.sunAboveHorizon
-    ? (useVerticalMast
-        ? Math.max(0, Math.cos(compareAstro.sunElevation * (Math.PI / 180)))
-        : compareAstro.powerGenPotential)
-    : 0;
-
-  const effectivePowerPercent = (effectivePowerFactor * 100).toFixed(1);
-  const effectiveSolarWatts = Math.round(effectivePowerFactor * 1361);
-
-  // ── 29.5-Day Timelapse Animation Loop ──────────────────────────────────────
-  useEffect(() => {
-    if (!timelapseActive) {
-      if (animFrameRef.current !== null) {
-        cancelAnimationFrame(animFrameRef.current);
-        animFrameRef.current = null;
-      }
-      lastTimeRef.current = null;
-      return;
-    }
-
-    // At 1x speed: complete full 29.5-day cycle in 18 seconds (approx 39.4 simulated hours/sec)
-    const hoursPerSec = (SYNODIC_MONTH_HOURS / 18) * timelapseSpeed;
-
-    const step = (now: number) => {
-      if (lastTimeRef.current !== null) {
-        const deltaSec = (now - lastTimeRef.current) / 1000;
-        setTimelapseOffsetHours((prev) => {
-          const next = prev + deltaSec * hoursPerSec;
-          if (next >= SYNODIC_MONTH_HOURS) {
-            return next % SYNODIC_MONTH_HOURS; // seamless loop
-          }
-          return next;
-        });
-      }
-      lastTimeRef.current = now;
-      animFrameRef.current = requestAnimationFrame(step);
-    };
-
-    animFrameRef.current = requestAnimationFrame(step);
-
-    return () => {
-      if (animFrameRef.current !== null) {
-        cancelAnimationFrame(animFrameRef.current);
-      }
-    };
-  }, [timelapseActive, timelapseSpeed, SYNODIC_MONTH_HOURS]);
-
-  const toggleTimelapse = () => {
-    setTimelapseActive((prev) => !prev);
-  };
-
-  const resetTimelapse = () => {
-    setTimelapseActive(false);
-    setTimelapseOffsetHours(0);
-  };
 
   // Redraw skyplot
   useEffect(() => {
@@ -656,18 +635,19 @@ export default function MissionPlanner() {
     );
   }, [activeSiteId, customLat, customLon, selectedDate, astro.sunAzimuth, astro.sunElevation, astro.earthAzimuth, astro.earthElevation]);
 
-  // Redraw timeline (tracking live simulation offset)
+  // Redraw timeline
   useEffect(() => {
     const canvas = timelineRef.current;
     if (!canvas) return;
     canvas.width = 800;
     canvas.height = 200;
     const site = getActiveSite();
-    const date = new Date(selectedDate + "T12:00:00Z");
+    const date = getDate();
     const timeline = getTimeline(site.lat, site.lon, date);
-    drawTimeline(canvas, timeline, timelapseOffsetHours);
+    const nowOffsetHours = 0; // "now" is the start date
+    drawTimeline(canvas, timeline, nowOffsetHours);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSiteId, customLat, customLon, selectedDate, timelapseOffsetHours]);
+  }, [activeSiteId, customLat, customLon, selectedDate]);
 
   const solarColor =
     astro.sunElevation > 10
@@ -1103,69 +1083,6 @@ export default function MissionPlanner() {
             </div>
           </div>
 
-          {/* SOLAR ARRAY ARCHITECTURE (POLAR GRAZING ILLUMINATION) */}
-          <div className="hud-frame p-4">
-            <div className="mb-2 flex items-center justify-between">
-              <span className="text-[10px] tracking-[0.28em] text-dim uppercase flex items-center gap-1.5">
-                <Zap className="h-3 w-3 text-ember" />
-                SOLAR ARRAY ARCHITECTURE
-              </span>
-              <span className="text-[9px] font-mono text-accent">
-                {useVerticalMast ? "VIPER // 99.9%" : "FLAT // 3.5%"}
-              </span>
-            </div>
-            <p className="mb-3 text-[11px] leading-relaxed text-dim/80">
-              At the lunar South Pole, the Sun grazes the horizon at only 1.5°–6.7°. Horizontal ground panels suffer acute cosine falloff (≈3.5% flux), while vertical masts capture near-normal irradiance (≈99.9%).
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                onClick={() => setUseVerticalMast(true)}
-                className={`flex flex-col items-start p-2.5 text-left border transition-all ${
-                  useVerticalMast
-                    ? "border-accent bg-accent/15 text-accent shadow-[0_0_12px_rgba(65,230,255,0.3)]"
-                    : "border-white/10 bg-panel text-dim hover:text-ink hover:border-white/20"
-                }`}
-              >
-                <span className="text-[10px] font-bold tracking-[0.15em] flex items-center gap-1">
-                  VERTICAL MAST
-                  {useVerticalMast && <Sparkles className="h-2.5 w-2.5 text-accent" />}
-                </span>
-                <span className="text-[8.5px] text-accent/80 mt-1 font-mono">
-                  NASA VIPER / Artemis
-                </span>
-                <span className="text-[9px] text-ink font-bold mt-1.5 tabular-nums">
-                  ≈ 99.9% · cos(θ)
-                </span>
-              </button>
-
-              <button
-                onClick={() => setUseVerticalMast(false)}
-                className={`flex flex-col items-start p-2.5 text-left border transition-all ${
-                  !useVerticalMast
-                    ? "border-ember bg-ember/15 text-ember shadow-[0_0_12px_rgba(255,180,84,0.3)]"
-                    : "border-white/10 bg-panel text-dim hover:text-ink hover:border-white/20"
-                }`}
-              >
-                <span className="text-[10px] font-bold tracking-[0.15em]">
-                  FLAT GROUND
-                </span>
-                <span className="text-[8.5px] text-ember/80 mt-1 font-mono">
-                  Horizontal Regolith
-                </span>
-                <span className="text-[9px] text-ink font-bold mt-1.5 tabular-nums">
-                  ≈ 3.5% · sin(θ)
-                </span>
-              </button>
-            </div>
-
-            <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2 text-[9.5px] font-mono text-dim">
-              <span>SOLAR CONSTANT: 1,361 W/m²</span>
-              <span className="text-ink font-bold tabular-nums">
-                HARVEST: {effectiveSolarWatts} W/m²
-              </span>
-            </div>
-          </div>
-
           {/* SITE SATELLITE & GIS LINKS */}
           <div className="border border-white/10 bg-panel p-4">
             <div className="mb-2 flex items-center justify-between">
@@ -1285,113 +1202,6 @@ export default function MissionPlanner() {
               </div>
             </div>
 
-            {/* ── 29.5-DAY POLAR TIMELAPSE & SHADOW CONTROLLER ── */}
-            <div className="mb-3 border border-white/10 bg-void/90 p-3">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={toggleTimelapse}
-                    className={`flex items-center gap-2 px-3.5 py-1.5 text-[9.5px] font-bold tracking-[0.2em] transition-all duration-300 ${
-                      timelapseActive
-                        ? "border border-ember bg-ember/25 text-ember shadow-[0_0_16px_rgba(255,180,84,0.6)] animate-pulse"
-                        : "border border-accent bg-accent/15 text-accent hover:bg-accent/25 shadow-[0_0_12px_rgba(65,230,255,0.3)]"
-                    }`}
-                    title="Animate 29.5-day lunar day cycle to watch the 3D Sun rotate around the polar horizon and cast dynamic sweeping shadows"
-                  >
-                    {timelapseActive ? (
-                      <>
-                        <Pause className="h-3.5 w-3.5 fill-current" />
-                        [ ⏸ PAUSE TIMELAPSE ]
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-3.5 w-3.5 fill-current" />
-                        [ ▶ PLAY 29.5-DAY TIMELAPSE ]
-                      </>
-                    )}
-                  </button>
-
-                  <button
-                    onClick={resetTimelapse}
-                    className="flex items-center gap-1 border border-white/15 bg-panel px-2.5 py-1.5 text-[9px] font-mono tracking-[0.15em] text-dim transition-colors hover:border-white/40 hover:text-ink"
-                    title="Reset to Day 0.0"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    RESET
-                  </button>
-
-                  <div className="flex items-center border border-white/10 bg-panel text-[9px] font-mono">
-                    {[
-                      { label: "0.5×", speed: 0.5 },
-                      { label: "1×", speed: 1 },
-                      { label: "2×", speed: 2 },
-                      { label: "4×", speed: 4 },
-                    ].map(({ label, speed }) => (
-                      <button
-                        key={label}
-                        onClick={() => setTimelapseSpeed(speed)}
-                        className={`px-2 py-1 transition-colors ${
-                          timelapseSpeed === speed
-                            ? "bg-accent/25 text-accent font-bold"
-                            : "text-dim hover:text-ink"
-                        }`}
-                      >
-                        {label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Real-time Telemetry readouts */}
-                <div className="flex flex-wrap items-center gap-2 text-[9.5px] font-mono">
-                  <div className="flex items-center gap-1 border border-white/10 bg-panel px-2 py-1">
-                    <span className="text-dim/60">DAY:</span>
-                    <span className="text-accent font-bold tabular-nums">
-                      {(timelapseOffsetHours / 24).toFixed(1)} / 29.5d
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 border border-white/10 bg-panel px-2 py-1">
-                    <span className="text-dim/60">SUN AZ:</span>
-                    <span className="text-ember font-bold tabular-nums">
-                      {astro.sunAzimuth.toFixed(1)}°
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 border border-white/10 bg-panel px-2 py-1">
-                    <span className="text-dim/60">SUN EL:</span>
-                    <span className="tabular-nums font-bold" style={{ color: solarColor }}>
-                      {astro.sunElevation.toFixed(1)}°
-                    </span>
-                  </div>
-                  <div className="hidden sm:flex items-center gap-1 border border-white/10 bg-panel px-2 py-1">
-                    <span className="text-dim/60">SHADOW:</span>
-                    <span className="text-ink font-bold tabular-nums">
-                      {((astro.sunAzimuth + 180) % 360).toFixed(0)}°
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Scrubber slider */}
-              <div className="mt-2.5 flex items-center gap-2.5">
-                <span className="text-[9px] font-mono text-dim/70 whitespace-nowrap">
-                  DAY 0.0
-                </span>
-                <input
-                  type="range"
-                  min="0"
-                  max={SYNODIC_MONTH_HOURS}
-                  step="0.5"
-                  value={timelapseOffsetHours}
-                  onChange={(e) => setTimelapseOffsetHours(parseFloat(e.target.value))}
-                  className="w-full h-1 bg-white/10 accent-[#41e6ff] cursor-pointer"
-                  title="Scrub across 29.5-day synodic lunar month"
-                />
-                <span className="text-[9px] font-mono text-dim/70 whitespace-nowrap">
-                  DAY 29.5
-                </span>
-              </div>
-            </div>
-
             {visMode === "surface3d" ? (
               <div className="h-[520px] w-full border border-white/5">
                 <LunarSurfaceViewer3D
@@ -1404,8 +1214,7 @@ export default function MissionPlanner() {
                   earthAzimuth={astro.earthAzimuth}
                   sunAboveHorizon={astro.sunAboveHorizon}
                   earthAboveHorizon={astro.earthAboveHorizon}
-                  powerGenPotential={effectivePowerFactor}
-                  useVerticalMast={useVerticalMast}
+                  powerGenPotential={astro.powerGenPotential}
                   stlUrl={(activeSite as any).stl}
                 />
               </div>
@@ -1458,57 +1267,56 @@ export default function MissionPlanner() {
             </div>
 
             {/* 2. Power Potential */}
-            <div className="hud-frame p-4 relative group">
-              <div className="mb-2 flex items-center justify-between text-[10px] tracking-[0.28em] text-dim">
-                <span className="flex items-center gap-1.5">
-                  <Zap className="h-3 w-3 text-ember" />
-                  POWER POTENTIAL
-                </span>
-                <span className={`text-[8.5px] px-1.5 py-0.5 font-bold tracking-[0.15em] border ${
-                  useVerticalMast
-                    ? "border-accent/40 bg-accent/10 text-accent"
-                    : "border-ember/40 bg-ember/10 text-ember"
-                }`}>
-                  {useVerticalMast ? "VERTICAL MAST" : "FLAT GROUND"}
-                </span>
-              </div>
-              <div className="flex items-baseline gap-2">
-                <div className="tabular-nums text-[2rem] font-bold leading-none text-ember">
-                  {effectivePowerPercent}%
+            <div className="hud-frame p-4 flex flex-col justify-between">
+              <div>
+                <div className="mb-2 flex items-center justify-between text-[10px] tracking-[0.28em] text-dim">
+                  <span className="flex items-center gap-1.5">
+                    <Zap className="h-3 w-3 text-ember" />
+                    POWER
+                  </span>
+                  <div className="flex border border-white/10 bg-void p-0.5 text-[8px]">
+                    <button
+                      onClick={() => setArrayConfig("vertical")}
+                      className={`px-1.5 py-0.5 font-mono cursor-pointer ${
+                        arrayConfig === "vertical"
+                          ? "bg-ember text-void font-bold"
+                          : "text-dim hover:text-ink"
+                      }`}
+                      title="Optimal for South Pole grazing sunlight"
+                    >
+                      VERT MAST
+                    </button>
+                    <button
+                      onClick={() => setArrayConfig("horizontal")}
+                      className={`px-1.5 py-0.5 font-mono cursor-pointer ${
+                        arrayConfig === "horizontal"
+                          ? "bg-ember text-void font-bold"
+                          : "text-dim hover:text-ink"
+                      }`}
+                      title="Standard horizontal surface panel"
+                    >
+                      FLAT
+                    </button>
+                  </div>
                 </div>
-                <div className="text-[11px] font-mono text-dim">
-                  {effectiveSolarWatts} W/m²
+                <div className="tabular-nums text-[2rem] font-bold leading-none text-ember">
+                  {((arrayConfig === "vertical" ? astro.powerGenVertical : astro.powerGenPotential) * 100).toFixed(0)}%
+                </div>
+                <div className="mt-1 text-[8.5px] tracking-[0.16em] text-dim/60">
+                  {arrayConfig === "vertical" ? "POLAR VERT MAST (COS θ)" : "FLAT PANEL (SIN θ)"}
                 </div>
               </div>
               <div className="mt-2 h-1.5 w-full bg-white/5">
                 <div
-                  className="h-full bg-ember transition-all duration-300"
+                  className="h-full bg-ember transition-all"
                   style={{
-                    width: `${effectivePowerFactor * 100}%`,
+                    width: `${(arrayConfig === "vertical" ? astro.powerGenVertical : astro.powerGenPotential) * 100}%`,
                     boxShadow:
-                      effectivePowerFactor > 0
+                      (arrayConfig === "vertical" ? astro.powerGenVertical : astro.powerGenPotential) > 0
                         ? "0 0 10px rgba(255,180,84,0.6)"
                         : "none",
                   }}
                 />
-              </div>
-
-              {/* In-card Mast Toggle */}
-              <div className="mt-3 flex items-center justify-between border-t border-white/5 pt-2">
-                <div className="text-[9px] text-dim/80">
-                  {useVerticalMast ? "VIPER Mast · cos(θ)" : "Flat Ground · sin(θ)"}
-                </div>
-                <button
-                  onClick={() => setUseVerticalMast(!useVerticalMast)}
-                  className={`text-[9px] px-2 py-0.5 border font-mono transition-all ${
-                    useVerticalMast
-                      ? "border-accent/50 text-accent bg-accent/10 hover:bg-accent/20"
-                      : "border-white/20 text-dim hover:text-ink hover:border-white/40"
-                  }`}
-                  title="Toggle between Vertical Mast and Flat Ground Array"
-                >
-                  TOGGLE CONFIG
-                </button>
               </div>
             </div>
 
@@ -1590,6 +1398,33 @@ export default function MissionPlanner() {
             </div>
           </div>
 
+          {/* EXPORT TELEMETRY TOOLBAR */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border border-white/10 bg-panel px-4 py-3">
+            <div className="flex items-center gap-2 text-[10px] tracking-[0.24em] text-dim">
+              <FileText className="h-3.5 w-3.5 text-accent" />
+              <span>MISSION TELEMETRY EXPORT</span>
+              <span className="text-dim/60">// {activeSite.name}</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => exportMissionTelemetry("csv")}
+                className="flex items-center gap-1.5 border border-white/15 bg-void px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] text-ink transition-colors hover:border-accent hover:text-accent cursor-pointer"
+                title="Download CSV spreadsheet of calculated ephemeris and comms windows"
+              >
+                <Download className="h-3 w-3 text-accent" />
+                EXPORT CSV
+              </button>
+              <button
+                onClick={() => exportMissionTelemetry("json")}
+                className="flex items-center gap-1.5 border border-white/15 bg-void px-3 py-1.5 text-[9px] font-bold tracking-[0.2em] text-ink transition-colors hover:border-accent hover:text-accent cursor-pointer"
+                title="Download structured JSON telemetry packet"
+              >
+                <Download className="h-3 w-3 text-accent" />
+                EXPORT JSON
+              </button>
+            </div>
+          </div>
+
           {/* TIMELINE CANVAS */}
           <div ref={timelineWrapRef} className="hud-frame overflow-hidden p-4">
             <div className="mb-3 flex items-center justify-between">
@@ -1663,14 +1498,12 @@ export default function MissionPlanner() {
                 label="SITE A — PRIMARY"
                 site={activeSite}
                 astro={astro}
-                useVerticalMast={useVerticalMast}
               />
               {/* Site B */}
               <CompareCard
                 label="SITE B — COMPARE"
                 site={compareSite}
                 astro={compareAstro}
-                useVerticalMast={useVerticalMast}
                 accent
               />
             </div>
@@ -1705,10 +1538,9 @@ interface CompareCardProps {
   site: (typeof PLANNER_SITES)[0];
   astro: ReturnType<typeof calculateAstro>;
   accent?: boolean;
-  useVerticalMast?: boolean;
 }
 
-function CompareCard({ label, site, astro, accent, useVerticalMast = true }: CompareCardProps) {
+function CompareCard({ label, site, astro, accent }: CompareCardProps) {
   const borderColor = accent
     ? "border-accent/40"
     : "border-white/[0.12]";
@@ -1720,12 +1552,6 @@ function CompareCard({ label, site, astro, accent, useVerticalMast = true }: Com
       : astro.sunElevation > 0
       ? "#ffb454"
       : "#ff5064";
-
-  const powerFactor = astro.sunAboveHorizon
-    ? (useVerticalMast
-        ? Math.max(0, Math.cos(astro.sunElevation * (Math.PI / 180)))
-        : astro.powerGenPotential)
-    : 0;
 
   // estimate comm window hours: fraction of lunar day earth is above horizon
   // rough approximation using communicationViability
@@ -1763,9 +1589,9 @@ function CompareCard({ label, site, astro, accent, useVerticalMast = true }: Com
         />
         <MetricRow
           label="POWER POTENTIAL"
-          value={`${(powerFactor * 100).toFixed(1)}% (${useVerticalMast ? "Mast" : "Flat"})`}
+          value={`${(astro.powerGenPotential * 100).toFixed(0)}%`}
           valueColor="#ffb454"
-          bar={powerFactor}
+          bar={astro.powerGenPotential}
           barColor="#ffb454"
         />
         <MetricRow

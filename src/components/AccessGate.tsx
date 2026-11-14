@@ -152,6 +152,18 @@ export default function AccessGate({ children }: AccessGateProps) {
             <span>AUTHENTICATE & ENTER</span>
             <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-1" />
           </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              localStorage.setItem("aero_delta_auth", "true");
+              setAuthorized(true);
+            }}
+            className="flex w-full items-center justify-center gap-2 border border-white/20 bg-void/80 px-4 py-2.5 text-[10.5px] font-mono tracking-[0.2em] text-ink hover:border-accent hover:text-accent hover:bg-accent/10 transition-all cursor-pointer"
+          >
+            <ShieldCheck className="h-3.5 w-3.5 text-accent" />
+            <span>[ NASA EVALUATOR 1-CLICK ACCESS ]</span>
+          </button>
         </form>
 
         {/* Quick Link Info for Judges */}

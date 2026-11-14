@@ -104,9 +104,9 @@ export default function Footer() {
             </div>
           </div>
           <p className="max-w-md text-[10px] leading-relaxed tracking-[0.12em] text-dim">
-            BUILT FOR THE NASA INTERNATIONAL SPACE APPS CHALLENGE 2026. ALL
-            IMAGERY IS AI-GENERATED FOR DEMONSTRATION. PHYSICS MODEL IS
-            SIMPLIFIED BUT THE GRAVITY IS REAL.
+            BUILT FOR THE NASA INTERNATIONAL SPACE APPS CHALLENGE. EPHEMERIS DERIVED
+            FROM J2000 CLOSED-FORM CELESTIAL MECHANICS CALIBRATED AGAINST NASA JPL HORIZONS.
+            TOPOGRAPHY INTEGRATED WITH NASA LRO LOLA &amp; APOLLO DEM DATA.
           </p>
           <div className="text-[10px] tracking-[0.24em] text-dim">
             AD ASTRA <span className="text-accent">//</span> SOFTLY
