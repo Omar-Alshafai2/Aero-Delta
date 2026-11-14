@@ -11,7 +11,7 @@
 
 **An intuitive, ephemeris-grade mission planning platform engineered for rapid landing site comparison, high-precision solar illumination modeling, and Direct-to-Earth (DTE) communication window assessment at the Moon's South Pole.**
 
-[🌐 Live Web Platform](https://sonic-sycamore-mjt9d3p.tmp.now/?access=aerodelta2026) • [📑 Technical Whitepaper](docs/AERO_DELTA_TECHNICAL_REPORT.md) • [📊 Presentation Deck](docs/AERO_DELTA_PRESENTATION_DECK.md)
+[🌐 Live Web Platform](https://rushing-cygnus-ijt5wua-omar-alshafai.vercel.app/?access=aerodelta2026) • [📑 Technical Whitepaper](docs/AERO_DELTA_TECHNICAL_REPORT.md) • [📊 Presentation Deck](docs/AERO_DELTA_PRESENTATION_DECK.md)
 
 </div>
 
