@@ -45,6 +45,89 @@ const STEP_HOURS = 0.5;
 /** Sample interval (hours) for timeline */
 const TIMELINE_STEP_HOURS = 6;
 
+// ─── Earth Link Visibility Configuration ─────────────────────────────────────
+
+/**
+ * Earth link visibility elevation thresholds (degrees).
+ * Elevation is the angle of Earth's center above the local horizon.
+ * Boundary values belong to the higher level (2° is MEDIUM, 5° is HIGH).
+ * Planning assumptions, not official NASA values.
+ */
+export const EARTH_LINK_THRESHOLDS = {
+  NONE_MAX: 0,    // below 0° -> NONE
+  LOW_MAX: 2,     // 0° to below 2° -> LOW
+  MEDIUM_MAX: 5,  // 2° to below 5° -> MEDIUM
+                  // 5° or above -> HIGH
+} as const;
+
+export type EarthLinkVisibilityLevel = "NONE" | "LOW" | "MEDIUM" | "HIGH";
+
+export interface EarthLinkLevelConfig {
+  label: EarthLinkVisibilityLevel;
+  color: string;
+  bgColor: string;
+  borderColor: string;
+  description: string;
+  barPercent: number;
+  horizonModel: "ideal" | "terrain-adjusted";
+}
+
+export const EARTH_LINK_LEVELS: Record<EarthLinkVisibilityLevel, EarthLinkLevelConfig> = {
+  NONE: {
+    label: "NONE",
+    color: "#ff5064",
+    bgColor: "rgba(255, 80, 100, 0.1)",
+    borderColor: "rgba(255, 80, 100, 0.4)",
+    description: "Earth is below horizon (<0°): no direct line of sight",
+    barPercent: 0,
+    horizonModel: "ideal",
+  },
+  LOW: {
+    label: "LOW",
+    color: "#ffb454",
+    bgColor: "rgba(255, 180, 84, 0.1)",
+    borderColor: "rgba(255, 180, 84, 0.4)",
+    description: "Grazing geometry (0° to <2° above horizon)",
+    barPercent: 33,
+    horizonModel: "ideal",
+  },
+  MEDIUM: {
+    label: "MEDIUM",
+    color: "#41e6ff",
+    bgColor: "rgba(65, 230, 255, 0.1)",
+    borderColor: "rgba(65, 230, 255, 0.4)",
+    description: "Moderate elevation (2° to <5° above horizon)",
+    barPercent: 66,
+    horizonModel: "ideal",
+  },
+  HIGH: {
+    label: "HIGH",
+    color: "#9dffb0",
+    bgColor: "rgba(157, 255, 176, 0.1)",
+    borderColor: "rgba(157, 255, 176, 0.4)",
+    description: "Clear line-of-sight elevation (≥5° above horizon)",
+    barPercent: 100,
+    horizonModel: "ideal",
+  },
+};
+
+/**
+ * Determine Earth link visibility level from Earth's elevation angle.
+ * Evaluated against the ideal spherical lunar horizon (0° geometric datum).
+ */
+export function getEarthLinkVisibility(earthElevation: number): EarthLinkLevelConfig {
+  if (earthElevation < EARTH_LINK_THRESHOLDS.NONE_MAX) {
+    return EARTH_LINK_LEVELS.NONE;
+  }
+  if (earthElevation < EARTH_LINK_THRESHOLDS.LOW_MAX) {
+    return EARTH_LINK_LEVELS.LOW;
+  }
+  if (earthElevation < EARTH_LINK_THRESHOLDS.MEDIUM_MAX) {
+    return EARTH_LINK_LEVELS.MEDIUM;
+  }
+  return EARTH_LINK_LEVELS.HIGH;
+}
+
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
 export interface AstroResult {

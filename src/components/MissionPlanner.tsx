@@ -38,6 +38,7 @@ import {
   getMoonTrekUrl,
   getJPLHorizonsApiUrl,
   getJPLHorizonsBatchScript,
+  getEarthLinkVisibility,
   LROC_QUICKMAP_BASE_URL,
   NASA_MOON_TREK_URL,
   JPL_HORIZONS_URL,
@@ -593,6 +594,9 @@ export default function MissionPlanner() {
 
   const effectivePowerPercent = (effectivePowerFactor * 100).toFixed(1);
   const effectiveSolarWatts = Math.round(effectivePowerFactor * 1361);
+
+  // ── Earth Link Visibility (Line-of-Sight Geometry Level) ───────────────────
+  const earthLink = getEarthLinkVisibility(astro.earthElevation);
 
   // ── 29.5-Day Timelapse Animation Loop ──────────────────────────────────────
   useEffect(() => {
@@ -1536,26 +1540,49 @@ export default function MissionPlanner() {
               </div>
             </div>
 
-            {/* 4. Comm Quality */}
-            <div className="hud-frame p-4">
-              <div className="mb-2 flex items-center gap-1.5 text-[10px] tracking-[0.28em] text-dim">
-                <Radio className="h-3 w-3" />
-                COMM QUALITY
+            {/* 4. Earth Link Visibility */}
+            <div
+              className="hud-frame p-4 relative group"
+              title="Reflects line-of-sight elevation geometry only; does not model RF link budget, transmitter power, antenna gain, or local terrain obstruction. Evaluated against ideal spherical horizon (0° datum)."
+            >
+              <div className="mb-2 flex items-center justify-between text-[10px] tracking-[0.28em] text-dim">
+                <span className="flex items-center gap-1.5">
+                  <Radio className="h-3 w-3" />
+                  EARTH LINK VISIBILITY
+                </span>
+                <span
+                  className="text-[8.5px] font-mono text-dim/60 border border-white/10 px-1 py-0.5"
+                  title="Ideal spherical lunar horizon (0° geometric datum) used"
+                >
+                  IDEAL HORIZON
+                </span>
               </div>
-              <div className="tabular-nums text-[2rem] font-bold leading-none text-accent">
-                {(astro.communicationViability * 100).toFixed(0)}%
-              </div>
-              <div className="mt-2 h-1.5 w-full bg-white/5">
+              <div className="flex items-baseline gap-2">
                 <div
-                  className="h-full bg-accent transition-all"
+                  className="tabular-nums text-[2rem] font-bold leading-none tracking-tight"
+                  style={{ color: earthLink.color }}
+                >
+                  {earthLink.label}
+                </div>
+                <div className="text-[11px] font-mono text-dim">
+                  {astro.earthElevation.toFixed(1)}° ELEV
+                </div>
+              </div>
+              <div className="mt-2 h-1.5 w-full bg-white/5 overflow-hidden">
+                <div
+                  className="h-full transition-all duration-300"
                   style={{
-                    width: `${astro.communicationViability * 100}%`,
+                    width: `${earthLink.barPercent}%`,
+                    backgroundColor: earthLink.color,
                     boxShadow:
-                      astro.communicationViability > 0
-                        ? "0 0 10px rgba(65,230,255,0.6)"
+                      earthLink.barPercent > 0
+                        ? `0 0 10px ${earthLink.color}80`
                         : "none",
                   }}
                 />
+              </div>
+              <div className="mt-1 text-[9px] tracking-[0.12em]" style={{ color: earthLink.color }}>
+                {earthLink.description}
               </div>
             </div>
 
